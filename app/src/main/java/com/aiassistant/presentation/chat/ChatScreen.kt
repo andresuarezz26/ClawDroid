@@ -15,28 +15,29 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @Composable
 fun ChatScreen(viewModel: ChatViewModel = hiltViewModel()) {
 
-  val state = viewModel.state.collectAsState().value
+  val state = viewModel.state.collectAsStateWithLifecycle().value
 
-  HomeScreenContent(
-    state.inputText,
-    state.isExecuting,
-    { newText -> viewModel.processIntent(ChatIntent.UpdateInput(newText)) },
-    { viewModel.processIntent(ChatIntent.RunCommand) })
+  ChatScreenContent(
+    inputText = state.inputText,
+    isExecuting = state.isExecuting,
+    onInputTextChange = { newText -> viewModel.processIntent(ChatIntent.UpdateInput(newText)) },
+    onRunCommand = { viewModel.processIntent(ChatIntent.RunCommand) })
 }
 
 @Composable
-private fun HomeScreenContent(
+private fun ChatScreenContent(
+  modifier: Modifier = Modifier,
   inputText: String = "",
   isExecuting: Boolean = false,
   onInputTextChange: (String) -> Unit = {},
@@ -46,8 +47,8 @@ private fun HomeScreenContent(
   Column {
     Text("Home Screen")
 
-    Row(Modifier.padding(16.dp)) {
-      CommandInput(inputText, onInputTextChange, onRunCommand, !isExecuting)
+    Row(modifier.padding(16.dp)) {
+      CommandInput(modifier = modifier, inputText, onInputTextChange, onRunCommand, !isExecuting)
     }
 
   }
@@ -55,13 +56,14 @@ private fun HomeScreenContent(
 
 @Composable
 fun CommandInput(
+  modifier: Modifier = Modifier,
   value: String,
   onValueChange: (String) -> Unit,
   onSend: () -> Unit,
   enabled: Boolean
 ) {
   Row(
-    modifier = Modifier
+    modifier = modifier
       .fillMaxWidth()
       .padding(8.dp),
     verticalAlignment = Alignment.CenterVertically
@@ -90,7 +92,5 @@ fun CommandInput(
 @Preview
 @Composable
 fun HomeScreenPreview() {
-  HomeScreenContent() {
-
-  }
+  ChatScreenContent()
 }

@@ -25,7 +25,7 @@
 ### Current Architecture State
 
 - **Single Module Structure:** All code in `:app` module (good!)
-- **Basic UI Compose:** Chat/Home screens exist but no functionality
+- **Basic UI Compose:** Chat screens exist but no functionality
 - **Navigation:** Basic NavHost setup between screens
 - **Accessibility Service:** Service class exists but no screen reading or action execution
 - **No LLM Integration:** No OpenAI API integration
