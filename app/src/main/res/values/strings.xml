@@ -1,4 +1,4 @@
 <resources>
-  <string name="app_name">Clawdroid</string>
-  <string name="accessibility_description">accesibility service</string>
+    <string name="app_name">Clawdroid</string>
+    <string name="accessibility_description">Automates UI actions to perform commands</string>
 </resources>

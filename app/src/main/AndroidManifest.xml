@@ -2,46 +2,53 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-  <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-  <application
-      android:allowBackup="true"
-      android:name=".presentation.ClawdroidApp"
-      android:dataExtractionRules="@xml/data_extraction_rules"
-      android:fullBackupContent="@xml/backup_rules"
-      android:icon="@mipmap/ic_launcher"
-      android:label="@string/app_name"
-      android:roundIcon="@mipmap/ic_launcher_round"
-      android:supportsRtl="true"
-      android:theme="@style/Theme.Clawdroid">
-    <activity
-        android:name=".presentation.MainActivity"
-        android:exported="true"
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+    </queries>
+
+    <application
+        android:allowBackup="true"
+        android:name=".presentation.ClawdroidApp"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
+        android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
         android:theme="@style/Theme.Clawdroid">
-      <intent-filter>
-        <action android:name="android.intent.action.MAIN" />
 
-        <category android:name="android.intent.category.LAUNCHER" />
-      </intent-filter>
-    </activity>
+        <activity
+            android:name=".presentation.MainActivity"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:theme="@style/Theme.Clawdroid">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
 
-    <service
-        android:name=".presentation.service.AutomatorAccessibilityService"
-        android:exported="true"
-        android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
-      <intent-filter>
-        <action android:name="android.accessibilityservice.AccessibilityService" />
-      </intent-filter>
-      <meta-data
-          android:name="android.accessibilityservice"
-          android:resource="@xml/accessibility_service_config" />
-    </service>
+        <service
+            android:name=".framework.accessibility.AutomatorAccessibilityService"
+            android:exported="true"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/accessibility_service_config" />
+        </service>
 
-    <service
-        android:name=".presentation.service.TaskForegroundService"
-        android:foregroundServiceType="specialUse"
-        android:exported="false" />
 
-  </application>
+
+    </application>
 
 </manifest>

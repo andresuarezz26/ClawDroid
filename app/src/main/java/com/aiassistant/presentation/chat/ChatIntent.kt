@@ -1,7 +1,8 @@
 package com.aiassistant.presentation.chat
 
 sealed interface ChatIntent {
-
-  data class UpdateInput(val input: String) : ChatIntent
-  object RunCommand : ChatIntent
+    data class ExecuteCommand(val command: String) : ChatIntent
+    data object CancelExecution : ChatIntent
+    data object ClearHistory : ChatIntent
+    data class UpdateInput(val input: String) : ChatIntent
 }

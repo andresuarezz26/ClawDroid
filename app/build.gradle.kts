@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
   alias(libs.plugins.android.application)
   alias(libs.plugins.kotlin.android)
@@ -6,6 +8,13 @@ plugins {
   id("com.google.devtools.ksp")
   id("com.google.dagger.hilt.android")
   id("kotlin-parcelize")
+}
+
+val localProperties = Properties().apply {
+  val localPropertiesFile = rootProject.file("local.properties")
+  if (localPropertiesFile.exists()) {
+    load(localPropertiesFile.inputStream())
+  }
 }
 
 android {
@@ -20,6 +29,8 @@ android {
     versionName = "1.0"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+    buildConfigField("String", "OPENAI_API_KEY", "\"${localProperties.getProperty("OPENAI_API_KEY", "")}\"")
   }
 
   buildTypes {
@@ -37,6 +48,7 @@ android {
   }
   buildFeatures {
     compose = true
+    buildConfig = true
   }
 }
 
@@ -80,6 +92,29 @@ dependencies {
   implementation(libs.androidx.ui.graphics)
   implementation(libs.androidx.ui.tooling.preview)
   implementation(libs.androidx.material3)
+
+  //endregion
+
+  //region Data
+
+  // Ktor
+  implementation(libs.ktor.client.core)
+  implementation(libs.ktor.client.cio)
+  implementation(libs.ktor.content.negotiation)
+  implementation(libs.ktor.serialization)
+
+  // Room
+  implementation(libs.room.runtime)
+  implementation(libs.room.ktx)
+  ksp(libs.room.compiler)
+  testImplementation(libs.room.testing)
+
+  // Security
+  implementation(libs.androidx.security.crypto)
+
+  //endregion
+
+  //region Test
 
   // General Test
   androidTestImplementation(platform(libs.androidx.compose.bom))

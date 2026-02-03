@@ -1,96 +1,98 @@
 package com.aiassistant.presentation.chat
 
+import android.content.Intent
+import android.provider.Settings
+import android.widget.Toast
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.aiassistant.presentation.chat.components.ChatBubble
+import com.aiassistant.presentation.chat.components.CommandInput
+import com.aiassistant.presentation.chat.components.ServiceDisconnectedBanner
+import com.aiassistant.presentation.chat.components.StepIndicator
+import kotlinx.coroutines.launch
 
 @Composable
-fun ChatScreen(viewModel: ChatViewModel = hiltViewModel()) {
-
-  val state = viewModel.state.collectAsStateWithLifecycle().value
-
-  ChatScreenContent(
-    inputText = state.inputText,
-    isExecuting = state.isExecuting,
-    onInputTextChange = { newText -> viewModel.processIntent(ChatIntent.UpdateInput(newText)) },
-    onRunCommand = { viewModel.processIntent(ChatIntent.RunCommand) })
-}
-
-@Composable
-private fun ChatScreenContent(
-  modifier: Modifier = Modifier,
-  inputText: String = "",
-  isExecuting: Boolean = false,
-  onInputTextChange: (String) -> Unit = {},
-  onRunCommand: () -> Unit = {}
+fun ChatScreen(
+    viewModel: ChatViewModel = hiltViewModel()
 ) {
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    val listState = rememberLazyListState()
+    val scope = rememberCoroutineScope()
 
-  Column {
-    Text("Home Screen")
-
-    Row(modifier.padding(16.dp)) {
-      CommandInput(modifier = modifier, inputText, onInputTextChange, onRunCommand, !isExecuting)
+    LaunchedEffect(Unit) {
+        viewModel.sideEffect.collect { effect ->
+            when (effect) {
+                is ChatSideEffect.ShowError -> {
+                    Toast.makeText(context, effect.message, Toast.LENGTH_LONG).show()
+                }
+                is ChatSideEffect.ScrollToBottom -> {
+                    scope.launch {
+                        if (state.messages.isNotEmpty()) {
+                            listState.animateScrollToItem(state.messages.lastIndex)
+                        }
+                    }
+                }
+                is ChatSideEffect.OpenAccessibilitySettings -> {
+                    context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+                }
+            }
+        }
     }
 
-  }
-}
+    Scaffold { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+        ) {
+            if (!state.isServiceConnected) {
+                ServiceDisconnectedBanner(
+                    onClick = { viewModel.processIntent(ChatIntent.ExecuteCommand("")) }
+                )
+            }
 
-@Composable
-fun CommandInput(
-  modifier: Modifier = Modifier,
-  value: String,
-  onValueChange: (String) -> Unit,
-  onSend: () -> Unit,
-  enabled: Boolean
-) {
-  Row(
-    modifier = modifier
-      .fillMaxWidth()
-      .padding(8.dp),
-    verticalAlignment = Alignment.CenterVertically
-  ) {
-    TextField(
-      value = value,
-      onValueChange = onValueChange,
-      modifier = Modifier.weight(1f),
-      placeholder = { Text("Type a command...") },
-      enabled = enabled,
-      singleLine = true,
-      keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
-      keyboardActions = KeyboardActions(onSend = { onSend() })
-    )
-    Spacer(Modifier.width(8.dp))
-    IconButton(onClick = onSend, enabled = enabled && value.isNotBlank()) {
-      Icon(
-        imageVector = Icons.AutoMirrored.Filled.Send,
-        contentDescription = "Execute"
-      )
+            LazyColumn(
+                state = listState,
+                modifier = Modifier.weight(1f),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(state.messages, key = { it.id }) { message ->
+                    ChatBubble(message = message)
+                }
+            }
+
+            if (state.isExecuting) {
+                StepIndicator(
+                    currentStep = state.currentStep,
+                    stepCount = state.stepCount,
+                    onCancel = { viewModel.processIntent(ChatIntent.CancelExecution) }
+                )
+            }
+
+            CommandInput(
+                value = state.inputText,
+                onValueChange = { viewModel.processIntent(ChatIntent.UpdateInput(it)) },
+                onSend = { viewModel.processIntent(ChatIntent.ExecuteCommand(state.inputText)) },
+                enabled = !state.isExecuting
+            )
+        }
     }
-  }
-}
-
-
-@Preview
-@Composable
-fun HomeScreenPreview() {
-  ChatScreenContent()
 }

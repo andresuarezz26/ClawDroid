@@ -22,6 +22,8 @@ mockitoKotlinKotlinVersion ="6.1.0"
 androidxCoreTestingVersion ="2.2.0"
 appcompat = "1.7.1"
 material = "1.13.0"
+ktor = "2.3.7"
+securityCrypto = "1.1.0-alpha06"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -62,7 +64,15 @@ mockito-kotlin = {group = "org.mockito.kotlin", name = "mockito-kotlin", version
 # Room
 room-runtime = {group = "androidx.room", name = "room-runtime", version.ref = "roomVersion"}
 room-compiler= {group = "androidx.room", name = "room-compiler", version.ref = "roomVersion"}
+room-ktx = {group = "androidx.room", name = "room-ktx", version.ref = "roomVersion"}
 room-testing = {group = "androidx.room", name = "room-testing", version.ref = "roomVersion"}
+# Ktor
+ktor-client-core = { group = "io.ktor", name = "ktor-client-core", version.ref = "ktor" }
+ktor-client-cio = { group = "io.ktor", name = "ktor-client-cio", version.ref = "ktor" }
+ktor-content-negotiation = { group = "io.ktor", name = "ktor-client-content-negotiation", version.ref = "ktor" }
+ktor-serialization = { group = "io.ktor", name = "ktor-serialization-kotlinx-json", version.ref = "ktor" }
+# Security Crypto
+androidx-security-crypto = { group = "androidx.security", name = "security-crypto", version.ref = "securityCrypto" }
 # Arch components core testing
 androidx-core-testing = {group = "androidx.arch.core", name = "core-testing", version.ref = "androidxCoreTestingVersion"}
 androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
