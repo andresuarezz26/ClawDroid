@@ -2,7 +2,12 @@ package com.aiassistant.framework.accessibility
 
 import android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_BACK
 import android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_HOME
+import android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_NOTIFICATIONS
+import android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_QUICK_SETTINGS
+import android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_RECENTS
+import android.accessibilityservice.GestureDescription
 import android.content.Intent
+import android.graphics.Path
 import android.os.Build
 import android.os.Bundle
 import android.view.accessibility.AccessibilityNodeInfo
@@ -12,8 +17,10 @@ import com.aiassistant.domain.model.AppTarget
 import com.aiassistant.domain.model.LaunchResult
 import com.aiassistant.domain.model.ScrollDirection
 import com.aiassistant.domain.repository.AppRepository
+import kotlinx.coroutines.suspendCancellableCoroutine
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.coroutines.resume
 
 @Singleton
 class ActionPerformer @Inject constructor(
@@ -35,6 +42,24 @@ class ActionPerformer @Inject constructor(
       ActionType.BACK -> serviceBridge.performGlobalAction(GLOBAL_ACTION_BACK)
       ActionType.HOME -> serviceBridge.performGlobalAction(GLOBAL_ACTION_HOME)
       ActionType.PRESS_ENTER -> pressEnter(nodeMap, action.index!!)
+
+      // Phase 1: Global Actions
+      ActionType.RECENT_APPS -> serviceBridge.performGlobalAction(GLOBAL_ACTION_RECENTS)
+      ActionType.NOTIFICATIONS -> serviceBridge.performGlobalAction(GLOBAL_ACTION_NOTIFICATIONS)
+      ActionType.QUICK_SETTINGS -> serviceBridge.performGlobalAction(GLOBAL_ACTION_QUICK_SETTINGS)
+
+      // Phase 2: Node Actions
+      ActionType.LONG_CLICK -> longClickNode(nodeMap, action.index!!)
+      ActionType.FOCUS -> focusNode(nodeMap, action.index!!)
+      ActionType.CLEAR_TEXT -> clearTextOnNode(nodeMap, action.index!!)
+
+      // Phase 3: Gesture Actions
+      ActionType.SWIPE -> performSwipeGesture(
+        action.startX!!, action.startY!!, action.endX!!, action.endY!!, action.duration ?: 300L
+      )
+      ActionType.DRAG -> performDragGesture(
+        action.startX!!, action.startY!!, action.endX!!, action.endY!!, action.duration ?: 500L
+      )
     }
   }
 
@@ -172,5 +197,83 @@ class ActionPerformer @Inject constructor(
     }
 
 
+  }
+
+  // Phase 2: Node Action helpers
+  private fun longClickNode(nodeMap: Map<Int, AccessibilityNodeInfo>, index: Int): Boolean {
+    val node = nodeMap[index] ?: return false
+    return node.performAction(AccessibilityNodeInfo.ACTION_LONG_CLICK)
+  }
+
+  private fun focusNode(nodeMap: Map<Int, AccessibilityNodeInfo>, index: Int): Boolean {
+    val node = nodeMap[index] ?: return false
+    return node.performAction(AccessibilityNodeInfo.ACTION_FOCUS)
+  }
+
+  private fun clearTextOnNode(nodeMap: Map<Int, AccessibilityNodeInfo>, index: Int): Boolean {
+    val node = nodeMap[index] ?: return false
+    node.performAction(AccessibilityNodeInfo.ACTION_FOCUS)
+    val args = Bundle().apply {
+      putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, "")
+    }
+    return node.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args)
+  }
+
+  // Phase 3: Gesture helpers
+  private suspend fun performSwipeGesture(
+    startX: Int,
+    startY: Int,
+    endX: Int,
+    endY: Int,
+    duration: Long
+  ): Boolean {
+    val path = Path().apply {
+      moveTo(startX.toFloat(), startY.toFloat())
+      lineTo(endX.toFloat(), endY.toFloat())
+    }
+    val gesture = GestureDescription.Builder()
+      .addStroke(GestureDescription.StrokeDescription(path, 0, duration))
+      .build()
+    return dispatchGestureWithCallback(gesture)
+  }
+
+  private suspend fun performDragGesture(
+    startX: Int,
+    startY: Int,
+    endX: Int,
+    endY: Int,
+    duration: Long
+  ): Boolean {
+    // Drag is essentially a slower swipe - longer duration for precision
+    val path = Path().apply {
+      moveTo(startX.toFloat(), startY.toFloat())
+      lineTo(endX.toFloat(), endY.toFloat())
+    }
+    val gesture = GestureDescription.Builder()
+      .addStroke(GestureDescription.StrokeDescription(path, 0, duration))
+      .build()
+    return dispatchGestureWithCallback(gesture)
+  }
+
+  private suspend fun dispatchGestureWithCallback(gesture: GestureDescription): Boolean {
+    return suspendCancellableCoroutine { continuation ->
+      val callback = object : android.accessibilityservice.AccessibilityService.GestureResultCallback() {
+        override fun onCompleted(gestureDescription: GestureDescription?) {
+          if (continuation.isActive) {
+            continuation.resume(true)
+          }
+        }
+
+        override fun onCancelled(gestureDescription: GestureDescription?) {
+          if (continuation.isActive) {
+            continuation.resume(false)
+          }
+        }
+      }
+      val dispatched = serviceBridge.dispatchGesture(gesture, callback)
+      if (!dispatched) {
+        continuation.resume(false)
+      }
+    }
   }
 }

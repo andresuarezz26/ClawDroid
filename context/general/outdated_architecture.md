@@ -1,3 +1,4 @@
+@Deprecated("This architecture was developed by the first time but it totally change with the koog migration feature )
 # Android AI Automation App — MVP Implementation Plan
 
 **Architecture:** Clean Architecture · MVI · Coroutines/Flow · Hilt · Jetpack Compose

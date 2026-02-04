@@ -1,5 +1,7 @@
 package com.aiassistant.framework.accessibility
 
+import android.accessibilityservice.AccessibilityService.GestureResultCallback
+import android.accessibilityservice.GestureDescription
 import android.content.Context
 import android.view.accessibility.AccessibilityNodeInfo
 import javax.inject.Inject
@@ -10,6 +12,7 @@ interface AccessibilityServiceBridge {
     fun isConnected(): Boolean
     fun performGlobalAction(action: Int): Boolean
     fun getContext(): Context?
+    fun dispatchGesture(gesture: GestureDescription, callback: GestureResultCallback?): Boolean
 }
 
 @Singleton
@@ -30,5 +33,10 @@ class AccessibilityServiceBridgeImpl @Inject constructor() : AccessibilityServic
 
     override fun getContext(): Context? {
         return AutomatorAccessibilityService.getInstance()
+    }
+
+    override fun dispatchGesture(gesture: GestureDescription, callback: GestureResultCallback?): Boolean {
+        val service = AutomatorAccessibilityService.getInstance() ?: return false
+        return service.dispatchGesture(gesture, callback, null)
     }
 }

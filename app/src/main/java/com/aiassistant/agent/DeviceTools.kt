@@ -144,4 +144,124 @@ class DeviceTools @Inject constructor(
     Log.i(TAG, "Tool: pressEnter() -> $result")
     return result
   }
+
+  // Phase 1: Global Action Tools
+  @Tool
+  @LLMDescription("Open recent apps switcher to see and switch between recently used apps")
+  suspend fun openRecentApps(): String {
+    Log.i(TAG, "Tool: openRecentApps() called")
+    val action = Action(type = ActionType.RECENT_APPS)
+    val result = if (screenRepository.performAction(action)) "Opened recent apps" else "FAILED"
+    Log.i(TAG, "Tool: openRecentApps() -> $result")
+    return result
+  }
+
+  @Tool
+  @LLMDescription("Pull down the notification shade to view notifications")
+  suspend fun openNotifications(): String {
+    Log.i(TAG, "Tool: openNotifications() called")
+    val action = Action(type = ActionType.NOTIFICATIONS)
+    val result = if (screenRepository.performAction(action)) "Opened notifications" else "FAILED"
+    Log.i(TAG, "Tool: openNotifications() -> $result")
+    return result
+  }
+
+  @Tool
+  @LLMDescription("Open quick settings panel for toggles like WiFi, Bluetooth, etc.")
+  suspend fun openQuickSettings(): String {
+    Log.i(TAG, "Tool: openQuickSettings() called")
+    val action = Action(type = ActionType.QUICK_SETTINGS)
+    val result = if (screenRepository.performAction(action)) "Opened quick settings" else "FAILED"
+    Log.i(TAG, "Tool: openQuickSettings() -> $result")
+    return result
+  }
+
+  // Phase 2: Node Action Tools
+  @Tool
+  @LLMDescription("Long press on element to open context menu or trigger long-click action")
+  suspend fun longClick(@LLMDescription("Element index") index: Int): String {
+    Log.i(TAG, "Tool: longClick(index=$index) called")
+    val action = Action(type = ActionType.LONG_CLICK, index = index)
+    val success = screenRepository.performAction(action)
+    val result = if (success) "Long clicked [$index]" else "FAILED: Long click [$index]"
+    Log.i(TAG, "Tool: longClick(index=$index) -> ${if(success) "" else result}")
+    return result
+  }
+
+  @Tool
+  @LLMDescription("Focus on an element without clicking it")
+  suspend fun focus(@LLMDescription("Element index") index: Int): String {
+    Log.i(TAG, "Tool: focus(index=$index) called")
+    val action = Action(type = ActionType.FOCUS, index = index)
+    val success = screenRepository.performAction(action)
+    val result = if (success) "Focused [$index]" else "FAILED: Focus [$index]"
+    Log.i(TAG, "Tool: focus(index=$index) -> ${if(success) "" else result}")
+    return result
+  }
+
+  @Tool
+  @LLMDescription("Clear all text from an editable field")
+  suspend fun clearText(@LLMDescription("Field index") index: Int): String {
+    Log.i(TAG, "Tool: clearText(index=$index) called")
+    val action = Action(type = ActionType.CLEAR_TEXT, index = index)
+    val success = screenRepository.performAction(action)
+    val result = if (success) "Cleared text at [$index]" else "FAILED: Clear text [$index]"
+    Log.i(TAG, "Tool: clearText(index=$index) -> ${if(success) "" else result}")
+    return result
+  }
+
+  // Phase 3: Gesture Action Tools
+  @Tool
+  @LLMDescription(
+    "Swipe from one point to another. Use for dismissing notifications, " +
+        "navigating carousels, or custom swipe gestures. Distance: short=100, medium=300, long=500 pixels."
+  )
+  suspend fun swipe(
+    @LLMDescription("Start X coordinate") startX: Int,
+    @LLMDescription("Start Y coordinate") startY: Int,
+    @LLMDescription("End X coordinate") endX: Int,
+    @LLMDescription("End Y coordinate") endY: Int,
+    @LLMDescription("Duration in milliseconds (default 300)") duration: Long = 300
+  ): String {
+    Log.i(TAG, "Tool: swipe(startX=$startX, startY=$startY, endX=$endX, endY=$endY, duration=$duration) called")
+    val action = Action(
+      type = ActionType.SWIPE,
+      startX = startX,
+      startY = startY,
+      endX = endX,
+      endY = endY,
+      duration = duration
+    )
+    val success = screenRepository.performAction(action)
+    val result = if (success) "Swiped from ($startX,$startY) to ($endX,$endY)" else "FAILED: Swipe"
+    Log.i(TAG, "Tool: swipe() -> $result")
+    return result
+  }
+
+  @Tool
+  @LLMDescription(
+    "Drag from one point to another. Use for reordering items or moving elements. " +
+        "Slower than swipe for precise control."
+  )
+  suspend fun drag(
+    @LLMDescription("Start X coordinate") startX: Int,
+    @LLMDescription("Start Y coordinate") startY: Int,
+    @LLMDescription("End X coordinate") endX: Int,
+    @LLMDescription("End Y coordinate") endY: Int,
+    @LLMDescription("Duration in milliseconds (default 500)") duration: Long = 500
+  ): String {
+    Log.i(TAG, "Tool: drag(startX=$startX, startY=$startY, endX=$endX, endY=$endY, duration=$duration) called")
+    val action = Action(
+      type = ActionType.DRAG,
+      startX = startX,
+      startY = startY,
+      endX = endX,
+      endY = endY,
+      duration = duration
+    )
+    val success = screenRepository.performAction(action)
+    val result = if (success) "Dragged from ($startX,$startY) to ($endX,$endY)" else "FAILED: Drag"
+    Log.i(TAG, "Tool: drag() -> $result")
+    return result
+  }
 }

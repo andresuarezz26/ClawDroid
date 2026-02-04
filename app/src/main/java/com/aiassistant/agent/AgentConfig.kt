@@ -5,7 +5,7 @@ data class AgentConfig(
     val model: String = "gpt-5-mini",
     val apiKey: String,
     val temperature: Double = 1.0,
-    val maxIterations: Int = 50
+    val maxIterations: Int = 70
 )
 
 enum class LLMProvider { OPENAI, ANTHROPIC, GOOGLE }
