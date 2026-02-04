@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -27,12 +28,14 @@ fun ChatBubble(message: ChatMessage) {
         modifier = Modifier.fillMaxWidth(),
         contentAlignment = alignment
     ) {
-        Text(
-            text = message.content,
-            modifier = Modifier
-                .background(backgroundColor, RoundedCornerShape(12.dp))
-                .padding(12.dp),
-            style = MaterialTheme.typography.bodyMedium
-        )
+        SelectionContainer {
+            Text(
+                text = message.content,
+                modifier = Modifier
+                    .background(backgroundColor, RoundedCornerShape(12.dp))
+                    .padding(12.dp),
+                style = MaterialTheme.typography.bodyMedium
+            )
+        }
     }
 }

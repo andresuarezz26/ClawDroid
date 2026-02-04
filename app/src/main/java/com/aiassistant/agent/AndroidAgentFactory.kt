@@ -9,14 +9,18 @@ import ai.koog.prompt.executor.clients.openai.OpenAIModels
 import ai.koog.prompt.executor.llms.all.simpleOpenAIExecutor
 import ai.koog.prompt.executor.llms.all.simpleAnthropicExecutor
 import ai.koog.prompt.executor.llms.all.simpleGoogleAIExecutor
+import android.util.Log
 import javax.inject.Inject
 import javax.inject.Singleton
+
+private const val TAG = "Agent"
 
 @Singleton
 class AndroidAgentFactory @Inject constructor(
     private val deviceTools: DeviceTools
 ) {
     fun createAgent(config: AgentConfig): AIAgent<String, String> {
+        Log.i(TAG, "createAgent called with provider=${config.provider}, model=${config.model}")
         val executor = when (config.provider) {
             LLMProvider.OPENAI -> simpleOpenAIExecutor(config.apiKey)
             LLMProvider.ANTHROPIC -> simpleAnthropicExecutor(config.apiKey)
@@ -24,6 +28,7 @@ class AndroidAgentFactory @Inject constructor(
         }
 
         val model = resolveModel(config)
+        Log.i(TAG, "Resolved model: $model, maxIterations=${config.maxIterations}, temperature=${config.temperature}")
 
         return AIAgent(
             promptExecutor = executor,
@@ -34,7 +39,9 @@ class AndroidAgentFactory @Inject constructor(
             toolRegistry = ToolRegistry {
                 tools(deviceTools)
             }
-        )
+        ).also {
+            Log.i(TAG, "Agent created successfully")
+        }
     }
 
     private fun resolveModel(config: AgentConfig) = when (config.provider) {
@@ -42,7 +49,9 @@ class AndroidAgentFactory @Inject constructor(
             "gpt-4o" -> OpenAIModels.Chat.GPT4o
             "gpt-4o-mini" -> OpenAIModels.Chat.GPT4oMini
             "gpt-4-turbo" -> OpenAIModels.Chat.GPT4_1Mini
-            else -> OpenAIModels.Chat.GPT4o
+            "gpt-5" -> OpenAIModels.Chat.GPT5
+            "gpt-5-mini" -> OpenAIModels.Chat.GPT5Mini
+            else -> OpenAIModels.Chat.GPT4oMini
         }
         LLMProvider.ANTHROPIC -> when (config.model) {
             "claude-3-5-sonnet" -> AnthropicModels.Sonnet_3_5
@@ -51,8 +60,8 @@ class AndroidAgentFactory @Inject constructor(
             else -> AnthropicModels.Sonnet_3_5
         }
         LLMProvider.GOOGLE -> when (config.model) {
-            "gemini-1.5-pro" -> GoogleModels.Gemini2_0Flash
-            "gemini-1.5-flash" -> GoogleModels.Gemini2_5Pro
+            "gemini-2.0-flash" -> GoogleModels.Gemini2_0Flash
+            "gemini-2.5-pro" -> GoogleModels.Gemini2_5Pro
             else -> GoogleModels.Gemini3_Pro_Preview
         }
     }

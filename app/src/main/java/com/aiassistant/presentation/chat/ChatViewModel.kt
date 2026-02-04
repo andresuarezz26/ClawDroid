@@ -5,6 +5,7 @@ import ai.koog.prompt.dsl.prompt
 import ai.koog.prompt.executor.clients.openai.OpenAIModels
 import ai.koog.prompt.executor.llms.all.simpleOpenAIExecutor
 import ai.koog.prompt.markdown.markdown
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.aiassistant.agent.AgentConfig
@@ -29,6 +30,8 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 import kotlinx.coroutines.flow.isActive
 import kotlinx.io.files.Path
+
+private const val TAG = "Agent"
 
 @HiltViewModel
 class ChatViewModel @Inject constructor(
@@ -70,14 +73,20 @@ class ChatViewModel @Inject constructor(
     }
 
     private fun executeCommand(command: String) {
-        if (command.isBlank()) return
+        Log.i(TAG, "executeCommand called with: $command")
+        if (command.isBlank()) {
+            Log.i(TAG, "Command is blank, returning")
+            return
+        }
         if (!_state.value.isServiceConnected) {
+            Log.i(TAG, "Service not connected, opening accessibility settings")
             viewModelScope.launch {
                 _sideEffect.send(ChatSideEffect.OpenAccessibilitySettings)
             }
             return
         }
 
+        Log.i(TAG, "Starting command execution")
         _state.update {
             it.copy(
                 messages = it.messages + ChatMessage(content = command, isUser = true),
@@ -92,15 +101,13 @@ class ChatViewModel @Inject constructor(
 
         executionJob = viewModelScope.launch {
             try {
+                Log.i(TAG, "Creating agent config")
                 val config = AgentConfig(
                     provider = LLMProvider.OPENAI,
                     apiKey = apiKeyProvider.getApiKey()
                 )
 
                 val processor = AgentEventProcessor(_isAgentOpen)
-
-
-                val executor = simpleOpenAIExecutor(apiKeyProvider.getApiKey())
 
                 // Collect progress for UI updates
                 val progressJob = launch {
@@ -109,12 +116,17 @@ class ChatViewModel @Inject constructor(
                     }
                 }
 
-
+                Log.i(TAG, "Creating agent")
                 val agent = agentFactory.createAgent(config).apply {
                     //install(Tracing) { addMessageProcessor(processor) }
                 }
 
-                val result = agent.run(command)
+                Log.i(TAG, "Running agent with command: $command")
+                val result = runWithRetry(maxRetries = 3) {
+                    agent.run(command)
+                }
+
+                Log.i(TAG, "Agent run completed with result: $result")
 
 
 
@@ -145,6 +157,7 @@ class ChatViewModel @Inject constructor(
                 _sideEffect.send(ChatSideEffect.ScrollToBottom)
 
             } catch (e: kotlinx.coroutines.CancellationException) {
+                Log.i(TAG, "Agent execution cancelled")
                 _state.update {
                     it.copy(
                         messages = it.messages + ChatMessage(
@@ -156,6 +169,7 @@ class ChatViewModel @Inject constructor(
                     )
                 }
             } catch (e: Exception) {
+                Log.i(TAG, "Agent execution error: ${e.message}", e)
                 _state.update {
                     it.copy(
                         isExecuting = false,
@@ -168,13 +182,16 @@ class ChatViewModel @Inject constructor(
     }
 
     private fun handleProgress(progress: AgentProgress) {
+        Log.i(TAG, "handleProgress: $progress")
         when (progress) {
             is AgentProgress.Started -> {
+                Log.i(TAG, "Progress: Agent started")
                 _state.update {
                     it.copy(currentStep = "Agent started", stepCount = 0)
                 }
             }
             is AgentProgress.ToolExecuting -> {
+                Log.i(TAG, "Progress: Executing tool ${progress.toolName}")
                 _state.update {
                     it.copy(
                         currentStep = "Executing: ${progress.toolName}",
@@ -184,11 +201,13 @@ class ChatViewModel @Inject constructor(
                 }
             }
             is AgentProgress.Completed -> {
+                Log.i(TAG, "Progress: Completed")
                 _state.update {
                     it.copy(currentStep = "Completed", currentTool = null)
                 }
             }
             is AgentProgress.Failed -> {
+                Log.i(TAG, "Progress: Failed with error ${progress.error}")
                 _state.update {
                     it.copy(
                         currentStep = "Failed: ${progress.error}",
@@ -200,6 +219,7 @@ class ChatViewModel @Inject constructor(
     }
 
     private fun cancelExecution() {
+        Log.i(TAG, "cancelExecution called")
         executionJob?.cancel()
         _state.update {
             it.copy(
@@ -208,5 +228,43 @@ class ChatViewModel @Inject constructor(
                 currentTool = null
             )
         }
+    }
+
+    /**
+     * Retry logic for transient network errors (5xx, timeouts).
+     * Uses exponential backoff: 1s, 2s, 4s delays between retries.
+     */
+    private suspend fun <T> runWithRetry(
+        maxRetries: Int = 3,
+        initialDelayMs: Long = 1000,
+        block: suspend () -> T
+    ): T {
+        var lastException: Exception? = null
+        var currentDelay = initialDelayMs
+
+        repeat(maxRetries) { attempt ->
+            try {
+                return block()
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e // Don't retry cancellation
+            } catch (e: Exception) {
+                val isTransient = e.message?.let { msg ->
+                    msg.contains("502") || msg.contains("503") || msg.contains("504") ||
+                    msg.contains("Bad Gateway") || msg.contains("Service Unavailable") ||
+                    msg.contains("Gateway Timeout") || msg.contains("timeout", ignoreCase = true)
+                } ?: false
+
+                if (isTransient && attempt < maxRetries - 1) {
+                    Log.w(TAG, "Transient error on attempt ${attempt + 1}, retrying in ${currentDelay}ms: ${e.message}")
+                    delay(currentDelay)
+                    currentDelay *= 2 // Exponential backoff
+                    lastException = e
+                } else {
+                    throw e // Non-transient error or last attempt, propagate
+                }
+            }
+        }
+
+        throw lastException ?: IllegalStateException("Retry failed without exception")
     }
 }

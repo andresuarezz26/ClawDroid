@@ -2,9 +2,9 @@ package com.aiassistant.agent
 
 data class AgentConfig(
     val provider: LLMProvider = LLMProvider.OPENAI,
-    val model: String = "gpt-4o",
+    val model: String = "gpt-5-mini",
     val apiKey: String,
-    val temperature: Double = 0.1,
+    val temperature: Double = 1.0,
     val maxIterations: Int = 50
 )
 

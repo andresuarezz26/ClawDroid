@@ -8,5 +8,5 @@ data class Action(
     val direction: ScrollDirection? = null
 )
 
-enum class ActionType { LAUNCH, CLICK, SET_TEXT, SCROLL, BACK, HOME }
+enum class ActionType { LAUNCH, CLICK, SET_TEXT, SCROLL, BACK, HOME, PRESS_ENTER}
 enum class ScrollDirection { UP, DOWN, LEFT, RIGHT }
