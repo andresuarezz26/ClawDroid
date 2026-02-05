@@ -87,6 +87,10 @@ class ChatViewModel @Inject constructor(
         }
 
         Log.i(TAG, "Starting command execution")
+
+        // Capture conversation history BEFORE adding the new user message
+        val historyForContext = _state.value.messages
+
         _state.update {
             it.copy(
                 messages = it.messages + ChatMessage(content = command, isUser = true),
@@ -116,14 +120,16 @@ class ChatViewModel @Inject constructor(
                     }
                 }
 
-                Log.i(TAG, "Creating agent")
-                val agent = agentFactory.createAgent(config).apply {
+                Log.i(TAG, "Creating agent with ${historyForContext.size} messages of conversation history")
+                val agent = agentFactory.createAgent(config, historyForContext).apply {
                     //install(Tracing) { addMessageProcessor(processor) }
                 }
 
                 Log.i(TAG, "Running agent with command: $command")
                 val result = runWithRetry(maxRetries = 3) {
                     agent.run(command)
+
+
                 }
 
                 Log.i(TAG, "Agent run completed with result: $result")
@@ -154,6 +160,7 @@ class ChatViewModel @Inject constructor(
                         currentTool = null
                     )
                 }
+                _sideEffect.send(ChatSideEffect.BringToForeground)
                 _sideEffect.send(ChatSideEffect.ScrollToBottom)
 
             } catch (e: kotlinx.coroutines.CancellationException) {
@@ -176,6 +183,7 @@ class ChatViewModel @Inject constructor(
                         currentTool = null
                     )
                 }
+                _sideEffect.send(ChatSideEffect.BringToForeground)
                 _sideEffect.send(ChatSideEffect.ShowError(e.message ?: "Unknown error"))
             }
         }

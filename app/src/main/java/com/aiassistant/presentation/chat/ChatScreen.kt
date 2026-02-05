@@ -52,6 +52,15 @@ fun ChatScreen(
                 is ChatSideEffect.OpenAccessibilitySettings -> {
                     context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
                 }
+                is ChatSideEffect.BringToForeground -> {
+                    val intent = context.packageManager
+                        .getLaunchIntentForPackage(context.packageName)
+                        ?.apply {
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
+                        }
+                    context.startActivity(intent)
+                }
             }
         }
     }
