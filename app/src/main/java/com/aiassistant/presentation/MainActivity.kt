@@ -11,14 +11,20 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import com.aiassistant.framework.permission.PermissionManager
 import com.aiassistant.presentation.navigation.NavigationStack
 import com.aiassistant.presentation.theme.ClawdroidTheme
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+
+  @Inject lateinit var permissionManager: PermissionManager
+
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
+    permissionManager.registerActivity(this)
     enableEdgeToEdge()
     setContent {
       ClawdroidTheme {
@@ -29,8 +35,13 @@ class MainActivity : ComponentActivity() {
           NavigationStack()
         }
       }
-      }
     }
+  }
+
+  override fun onDestroy() {
+    super.onDestroy()
+    permissionManager.unregisterActivity()
+  }
 }
 
 @Composable

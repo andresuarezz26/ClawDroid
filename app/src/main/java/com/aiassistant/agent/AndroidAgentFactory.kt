@@ -22,7 +22,8 @@ private const val TAG = "Agent"
 
 @Singleton
 class AndroidAgentFactory @Inject constructor(
-    private val deviceTools: DeviceTools
+    private val deviceTools: DeviceTools,
+    private val quickActionTools: QuickActionTools
 ) {
     fun createAgent(config: AgentConfig): AIAgent<String, String> {
         return createAgent(config, emptyList())
@@ -49,6 +50,7 @@ class AndroidAgentFactory @Inject constructor(
             maxIterations = config.maxIterations,
             toolRegistry = ToolRegistry {
                 tools(deviceTools)
+                tools(quickActionTools)
             }
 
         ){
@@ -75,7 +77,7 @@ class AndroidAgentFactory @Inject constructor(
         val historySection = buildString {
             appendLine("\n\n--- CONVERSATION HISTORY ---")
             appendLine("(Previous messages in this session for context)")
-            history.takeLast(10).forEach { msg ->  // Limit to last 10 to manage tokens
+            history.takeLast(100).forEach { msg ->  // Limit to last 10 to manage tokens
                 val role = if (msg.isUser) "User" else "Assistant"
                 appendLine("$role: ${msg.content}")
             }

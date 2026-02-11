@@ -85,6 +85,9 @@ class ChatViewModel @Inject constructor(
             }
             return
         }
+        if (!_state.value.isServiceConnected) {
+            Log.i(TAG, "Service not connected — quick actions still available, UI automation disabled")
+        }
 
         Log.i(TAG, "Starting command execution")
 
@@ -259,8 +262,11 @@ class ChatViewModel @Inject constructor(
                 val isTransient = e.message?.let { msg ->
                     msg.contains("502") || msg.contains("503") || msg.contains("504") ||
                     msg.contains("Bad Gateway") || msg.contains("Service Unavailable") ||
-                    msg.contains("Gateway Timeout") || msg.contains("timeout", ignoreCase = true)
-                } ?: false
+                    msg.contains("Gateway Timeout") || msg.contains("timeout", ignoreCase = true) ||
+                    msg.contains("prematurely closed", ignoreCase = true) ||
+                    msg.contains("EOFException", ignoreCase = true) ||
+                    msg.contains("connection reset", ignoreCase = true)
+                } ?: (e is java.io.EOFException)
 
                 if (isTransient && attempt < maxRetries - 1) {
                     Log.w(TAG, "Transient error on attempt ${attempt + 1}, retrying in ${currentDelay}ms: ${e.message}")

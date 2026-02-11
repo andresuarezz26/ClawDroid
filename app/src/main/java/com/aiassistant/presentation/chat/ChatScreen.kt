@@ -96,7 +96,7 @@ fun ChatScreen(
         ) {
             if (!state.isServiceConnected) {
                 ServiceDisconnectedBanner(
-                    onClick = { viewModel.processIntent(ChatIntent.ExecuteCommand("")) }
+                    onClick = { context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) }
                 )
             }
 

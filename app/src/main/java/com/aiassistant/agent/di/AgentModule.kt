@@ -2,6 +2,7 @@ package com.aiassistant.agent.di
 
 import com.aiassistant.agent.AndroidAgentFactory
 import com.aiassistant.agent.DeviceTools
+import com.aiassistant.agent.QuickActionTools
 import com.aiassistant.data.mapper.UINodeFormatter
 import com.aiassistant.domain.repository.ScreenRepository
 import dagger.Module
@@ -25,9 +26,18 @@ object AgentModule {
 
     @Provides
     @Singleton
+    fun provideQuickActionTools(
+        screenRepository: ScreenRepository
+    ): QuickActionTools {
+        return QuickActionTools(screenRepository)
+    }
+
+    @Provides
+    @Singleton
     fun provideAndroidAgentFactory(
-        deviceTools: DeviceTools
+        deviceTools: DeviceTools,
+        quickActionTools: QuickActionTools
     ): AndroidAgentFactory {
-        return AndroidAgentFactory(deviceTools)
+        return AndroidAgentFactory(deviceTools, quickActionTools)
     }
 }
