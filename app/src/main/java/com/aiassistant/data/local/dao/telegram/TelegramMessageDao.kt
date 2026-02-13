@@ -4,7 +4,6 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.Query
 import com.aiassistant.data.local.entity.telegram.TelegramMessageEntity
-import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface TelegramMessageDao {
@@ -12,15 +11,8 @@ interface TelegramMessageDao {
     @Insert
     suspend fun insert(message: TelegramMessageEntity)
 
-    @Query("SELECT * FROM telegram_messages WHERE chatId = :chatId ORDER BY timestamp DESC LIMIT :limit")
+    // Fetch the N most recent messages, then reverse to chronological order
+    // so the LLM sees them oldest → newest (natural conversation flow)
+    @Query("SELECT * FROM (SELECT * FROM telegram_messages WHERE chatId = :chatId ORDER BY timestamp DESC LIMIT :limit) ORDER BY timestamp ASC")
     suspend fun getRecentMessages(chatId: Long, limit: Int): List<TelegramMessageEntity>
-
-    @Query("SELECT * FROM telegram_messages WHERE chatId = :chatId ORDER BY timestamp ASC")
-    fun observeMessages(chatId: Long): Flow<List<TelegramMessageEntity>>
-
-    @Query("DELETE FROM telegram_messages WHERE chatId = :chatId")
-    suspend fun deleteAllForChat(chatId: Long)
-
-    @Query("SELECT COUNT(*) FROM telegram_messages WHERE chatId = :chatId")
-    suspend fun getMessageCount(chatId: Long): Int
 }
