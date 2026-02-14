@@ -1,24 +1,17 @@
 package com.aiassistant.data.repository.telegram
 
-import com.aiassistant.data.local.dao.telegram.TelegramConversationDao
-import com.aiassistant.data.local.dao.telegram.TelegramMessageDao
-import com.aiassistant.data.local.entity.telegram.TelegramConversationEntity
-import com.aiassistant.data.local.entity.telegram.TelegramMessageEntity
+import com.aiassistant.data.local.dao.telegram.ConversationDao
+import com.aiassistant.data.local.entity.ConversationEntity
 import com.aiassistant.data.remote.telegram.TelegramApi
-import com.aiassistant.domain.model.ChatMessage
 import com.aiassistant.domain.model.TelegramUpdate
-import com.aiassistant.domain.repository.telegram.TelegramConversation
 import com.aiassistant.domain.repository.telegram.TelegramRepository
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
 
 @Singleton
 class TelegramRepositoryImpl @Inject constructor(
   private val telegramApi: TelegramApi,
-  private val conversationDao: TelegramConversationDao,
-  private val messageDao: TelegramMessageDao
+  private val conversationDao: ConversationDao
 ) : TelegramRepository {
 
     override suspend fun pollUpdates(offset: Long?): Result<List<TelegramUpdate>> {
@@ -29,7 +22,7 @@ class TelegramRepositoryImpl @Inject constructor(
                 val text = message.text ?: return@mapNotNull null
 
                 // Update conversation record
-                val conversation = TelegramConversationEntity(
+                val conversation = ConversationEntity(
                   chatId = message.chat.id,
                   username = message.from?.username,
                   firstName = message.from?.firstName,
@@ -87,47 +80,10 @@ class TelegramRepositoryImpl @Inject constructor(
         return chunks
     }
 
-    override suspend fun getConversationHistory(chatId: Long, limit: Int): List<ChatMessage> {
-        return messageDao.getRecentMessages(chatId, limit)
-            .reversed()
-            .map { entity ->
-              ChatMessage(
-                id = entity.id.toString(),
-                content = entity.content,
-                isUser = entity.isFromUser,
-                timestamp = entity.timestamp
-              )
-            }
-    }
-
-    override suspend fun saveMessage(chatId: Long, content: String, isFromUser: Boolean) {
-        val entity = TelegramMessageEntity(
-          chatId = chatId,
-          content = content,
-          isFromUser = isFromUser,
-          timestamp = System.currentTimeMillis()
-        )
-        messageDao.insert(entity)
-        conversationDao.updateLastMessageTime(chatId, System.currentTimeMillis())
-    }
-
     override suspend fun validateToken(): Boolean {
         return runCatching {
             telegramApi.getMe()
             true
         }.getOrDefault(false)
-    }
-
-    override fun observeConversations(): Flow<List<TelegramConversation>> {
-        return conversationDao.getAllConversations().map { entities ->
-            entities.map { entity ->
-              TelegramConversation(
-                chatId = entity.chatId,
-                username = entity.username,
-                firstName = entity.firstName,
-                lastMessageAt = entity.lastMessageAt
-              )
-            }
-        }
     }
 }

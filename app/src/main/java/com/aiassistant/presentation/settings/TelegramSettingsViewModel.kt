@@ -4,9 +4,10 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.aiassistant.domain.preference.SharedPreferenceDataSource
-import com.aiassistant.domain.repository.telegram.TelegramConversation
+import com.aiassistant.domain.repository.telegram.ConversationModel
 import com.aiassistant.domain.repository.telegram.TelegramRepository
-import com.aiassistant.domain.usecase.telegram.ValidateTokenUseCase
+import com.aiassistant.domain.usecase.messages.ObserveConversationUseCase
+import com.aiassistant.domain.usecase.telegram.ValidateTelegramTokenUseCase
 import com.aiassistant.framework.notification.NotificationListenerServiceState
 import com.aiassistant.framework.permission.PermissionManager
 import com.aiassistant.framework.telegram.TelegramBotService
@@ -28,7 +29,7 @@ data class TelegramSettingsState(
   val isBotRunning: Boolean = false,
   val isValidating: Boolean = false,
   val validationResult: ValidationResult? = null,
-  val conversations: List<TelegramConversation> = emptyList(),
+  val conversations: List<ConversationModel> = emptyList(),
   val isNotificationListenerEnabled: Boolean = false,
   val isNotificationForwardingEnabled: Boolean = false
 )
@@ -53,8 +54,8 @@ sealed interface TelegramSettingsIntent {
 @HiltViewModel
 class TelegramSettingsViewModel @Inject constructor(
   private val preferences: SharedPreferenceDataSource,
-  private val validateTokenUseCase: ValidateTokenUseCase,
-  private val telegramRepository: TelegramRepository,
+  private val validateTelegramTokenUseCase: ValidateTelegramTokenUseCase,
+  private val observeConversationUseCase: ObserveConversationUseCase,
   @ApplicationContext private val context: Context,
   private var serviceState: TelegramServiceState,
   private val permissionManager: PermissionManager,
@@ -95,7 +96,7 @@ class TelegramSettingsViewModel @Inject constructor(
 
   private fun observeConversations() {
     viewModelScope.launch {
-      telegramRepository.observeConversations().collect { conversations ->
+      observeConversationUseCase().collect { conversations ->
         _state.update { it.copy(conversations = conversations) }
       }
     }
@@ -158,7 +159,7 @@ class TelegramSettingsViewModel @Inject constructor(
       _state.update { it.copy(isValidating = true, validationResult = null) }
 
       val isValid = withContext(Dispatchers.IO) {
-        validateTokenUseCase()
+        validateTelegramTokenUseCase()
       }
 
       _state.update {

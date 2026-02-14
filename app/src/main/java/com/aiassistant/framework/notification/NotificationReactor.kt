@@ -5,15 +5,14 @@ import com.aiassistant.agent.AgentExecutor
 import com.aiassistant.agent.AgentResult
 import com.aiassistant.domain.preference.SharedPreferenceDataSource
 import com.aiassistant.domain.repository.notification.NotificationRepository
-import com.aiassistant.domain.usecase.telegram.GetConversationHistoryUseCase
-import com.aiassistant.domain.usecase.telegram.SaveMessageUseCase
-import com.aiassistant.domain.usecase.telegram.SendResponseUseCase
+import com.aiassistant.domain.usecase.messages.GetConversationHistoryUseCase
+import com.aiassistant.domain.usecase.messages.SaveMessageUseCase
+import com.aiassistant.domain.usecase.telegram.SendResponseTelegramUseCase
 import com.aiassistant.framework.telegram.TelegramServiceState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -25,7 +24,7 @@ private const val RATE_LIMIT_MS = 5_000L
 class NotificationReactor @Inject constructor(
     private val repository: NotificationRepository,
     private val agentExecutor: AgentExecutor,
-    private val sendResponseUseCase: SendResponseUseCase,
+    private val sendResponseTelegramUseCase: SendResponseTelegramUseCase,
     private val saveMessageUseCase: SaveMessageUseCase,
     private val getConversationHistoryUseCase: GetConversationHistoryUseCase,
     private val telegramServiceState: TelegramServiceState,
@@ -101,7 +100,7 @@ class NotificationReactor @Inject constructor(
                     saveMessageUseCase(chatId, responseText, isFromUser = false)
 
                     // Send to Telegram
-                    sendResponseUseCase(chatId, responseText).onFailure { error ->
+                    sendResponseTelegramUseCase(chatId, responseText).onFailure { error ->
                         Log.e(TAG, "Failed to send notification response to Telegram", error)
                     }
                 } catch (e: Exception) {

@@ -4,17 +4,17 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
-import com.aiassistant.data.local.entity.telegram.TelegramConversationEntity
+import com.aiassistant.data.local.entity.ConversationEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao
-interface TelegramConversationDao {
+interface ConversationDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun upsert(conversation: TelegramConversationEntity)
+    suspend fun upsert(conversation: ConversationEntity)
 
     @Query("SELECT * FROM telegram_conversations ORDER BY lastMessageAt DESC")
-    fun getAllConversations(): Flow<List<TelegramConversationEntity>>
+    fun getAllConversations(): Flow<List<ConversationEntity>>
 
     @Query("UPDATE telegram_conversations SET lastMessageAt = :timestamp WHERE chatId = :chatId")
     suspend fun updateLastMessageTime(chatId: Long, timestamp: Long)

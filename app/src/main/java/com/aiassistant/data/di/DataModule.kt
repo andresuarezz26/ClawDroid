@@ -4,14 +4,16 @@ import android.content.Context
 import androidx.room.Room
 import com.aiassistant.data.local.AppDatabase
 import com.aiassistant.data.local.dao.notification.NotificationDao
-import com.aiassistant.data.local.dao.telegram.TelegramConversationDao
-import com.aiassistant.data.local.dao.telegram.TelegramMessageDao
+import com.aiassistant.data.local.dao.telegram.ConversationDao
+import com.aiassistant.data.local.dao.telegram.MessageDao
 import com.aiassistant.data.repository.AppRepositoryImpl
 import com.aiassistant.data.repository.ScreenRepositoryImpl
+import com.aiassistant.data.repository.messages.MessagesRepositoryImpl
 import com.aiassistant.data.repository.notification.NotificationRepositoryImpl
 import com.aiassistant.data.repository.telegram.TelegramRepositoryImpl
 import com.aiassistant.domain.repository.AppRepository
 import com.aiassistant.domain.repository.ScreenRepository
+import com.aiassistant.domain.repository.messages.MessagesRepository
 import com.aiassistant.domain.repository.notification.NotificationRepository
 import com.aiassistant.domain.repository.telegram.TelegramRepository
 import dagger.Binds
@@ -40,6 +42,10 @@ abstract class DataModule {
 
     @Binds
     @Singleton
+    abstract fun bindMessagesRepository(impl: MessagesRepositoryImpl): MessagesRepository
+
+    @Binds
+    @Singleton
     abstract fun bindNotificationRepository(impl: NotificationRepositoryImpl): NotificationRepository
 }
 
@@ -61,13 +67,13 @@ object DatabaseModule {
 
     @Provides
     @Singleton
-    fun provideTelegramConversationDao(database: AppDatabase): TelegramConversationDao {
+    fun provideTelegramConversationDao(database: AppDatabase): ConversationDao {
         return database.telegramConversationDao()
     }
 
     @Provides
     @Singleton
-    fun provideTelegramMessageDao(database: AppDatabase): TelegramMessageDao {
+    fun provideTelegramMessageDao(database: AppDatabase): MessageDao {
         return database.telegramMessageDao()
     }
 

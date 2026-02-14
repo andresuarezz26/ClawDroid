@@ -8,10 +8,10 @@ import android.os.IBinder
 import android.util.Log
 import com.aiassistant.agent.AgentExecutor
 import com.aiassistant.agent.AgentResult
-import com.aiassistant.domain.usecase.telegram.GetConversationHistoryUseCase
-import com.aiassistant.domain.usecase.telegram.PollUpdatesUseCase
-import com.aiassistant.domain.usecase.telegram.SaveMessageUseCase
-import com.aiassistant.domain.usecase.telegram.SendResponseUseCase
+import com.aiassistant.domain.usecase.messages.GetConversationHistoryUseCase
+import com.aiassistant.domain.usecase.telegram.PollUpdatesTelegramUseCase
+import com.aiassistant.domain.usecase.messages.SaveMessageUseCase
+import com.aiassistant.domain.usecase.telegram.SendResponseTelegramUseCase
 import com.aiassistant.framework.notification.NotificationReactor
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
@@ -30,10 +30,10 @@ private const val TAG = "TelegramBotService"
 class TelegramBotService : Service() {
 
     @Inject
-    lateinit var pollUpdatesUseCase: PollUpdatesUseCase
+    lateinit var pollUpdatesTelegramUseCase: PollUpdatesTelegramUseCase
 
     @Inject
-    lateinit var sendResponseUseCase: SendResponseUseCase
+    lateinit var sendResponseTelegramUseCase: SendResponseTelegramUseCase
 
     @Inject
     lateinit var saveMessageUseCase: SaveMessageUseCase
@@ -100,7 +100,7 @@ class TelegramBotService : Service() {
                 try {
                     Log.d(TAG, "Polling for updates, offset: $lastUpdateOffset")
 
-                    val result = pollUpdatesUseCase(lastUpdateOffset)
+                    val result = pollUpdatesTelegramUseCase(lastUpdateOffset)
 
                     result.onSuccess { updates ->
                         retryDelay = 1_000L // Reset on success
@@ -168,7 +168,7 @@ class TelegramBotService : Service() {
             saveMessageUseCase(chatId, responseText, isFromUser = false)
 
             // Send response to Telegram
-            sendResponseUseCase(chatId, responseText).onFailure { error ->
+            sendResponseTelegramUseCase(chatId, responseText).onFailure { error ->
                 Log.e(TAG, "Failed to send response: ${error.message}")
             }
 
@@ -180,7 +180,7 @@ class TelegramBotService : Service() {
             Log.e(TAG, "Error processing message", e)
 
             val errorMessage = "Sorry, an error occurred: ${e.message}"
-            sendResponseUseCase(chatId, errorMessage)
+            sendResponseTelegramUseCase(chatId, errorMessage)
         }
     }
 

@@ -1,4 +1,4 @@
-package com.aiassistant.data.local.entity.telegram
+package com.aiassistant.data.local.entity
 
 import androidx.room.Entity
 import androidx.room.ForeignKey
@@ -8,16 +8,16 @@ import androidx.room.PrimaryKey
 @Entity(
     tableName = "telegram_messages",
     foreignKeys = [
-        ForeignKey(
-            entity = TelegramConversationEntity::class,
-            parentColumns = ["chatId"],
-            childColumns = ["chatId"],
-            onDelete = ForeignKey.CASCADE
-        )
+      ForeignKey(
+        entity = ConversationEntity::class,
+        parentColumns = ["chatId"],
+        childColumns = ["chatId"],
+        onDelete = ForeignKey.Companion.CASCADE
+      )
     ],
     indices = [Index("chatId")]
 )
-data class TelegramMessageEntity(
+data class MessageEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
     val chatId: Long,

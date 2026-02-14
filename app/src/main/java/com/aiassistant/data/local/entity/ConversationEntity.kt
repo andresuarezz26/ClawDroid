@@ -1,10 +1,10 @@
-package com.aiassistant.data.local.entity.telegram
+package com.aiassistant.data.local.entity
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
 @Entity(tableName = "telegram_conversations")
-data class TelegramConversationEntity(
+data class ConversationEntity(
     @PrimaryKey
     val chatId: Long,
     val username: String?,

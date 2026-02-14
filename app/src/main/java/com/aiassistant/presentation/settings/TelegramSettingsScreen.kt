@@ -383,7 +383,7 @@ private fun SetupStep(number: Int, text: String) {
 }
 
 @Composable
-private fun ConversationItem(conversation: com.aiassistant.domain.repository.telegram.TelegramConversation) {
+private fun ConversationItem(conversation: com.aiassistant.domain.repository.telegram.ConversationModel) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
