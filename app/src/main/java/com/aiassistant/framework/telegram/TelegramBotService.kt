@@ -8,6 +8,7 @@ import android.os.IBinder
 import android.util.Log
 import com.aiassistant.agent.AgentExecutor
 import com.aiassistant.agent.AgentResult
+import com.aiassistant.agent.AgentType
 import com.aiassistant.domain.model.DEFAULT_CHAT_ID
 import com.aiassistant.domain.preference.SharedPreferenceDataSource
 import com.aiassistant.domain.usecase.messages.GetConversationHistoryUseCase
@@ -151,7 +152,8 @@ class TelegramBotService : Service() {
             val result = agentExecutor.execute(
                 command = text,
                 conversationHistory = history,
-                requireServiceConnection = false
+                requireServiceConnection = false,
+                agentType = AgentType.GENERAL
             )
 
             // Prepare response based on result

@@ -11,6 +11,7 @@ import androidx.lifecycle.viewModelScope
 import com.aiassistant.agent.AgentConfig
 import com.aiassistant.agent.AgentEventProcessor
 import com.aiassistant.agent.AgentProgress
+import com.aiassistant.agent.AgentType
 import com.aiassistant.agent.AndroidAgentFactory
 import com.aiassistant.agent.LLMProvider
 import com.aiassistant.data.remote.ApiKeyProvider
@@ -125,7 +126,8 @@ class ChatViewModel @Inject constructor(
                 Log.i(TAG, "Creating agent config")
                 val config = AgentConfig(
                     provider = LLMProvider.OPENAI,
-                    apiKey = apiKeyProvider.getApiKey()
+                    apiKey = apiKeyProvider.getApiKey(),
+                    agentType = AgentType.GENERAL
                 )
 
                 val processor = AgentEventProcessor(_isAgentOpen)

@@ -26,8 +26,9 @@ class AgentExecutor @Inject constructor(
 
     suspend fun execute(
         command: String,
+        agentType: AgentType,
         conversationHistory: List<ChatMessage> = emptyList(),
-        requireServiceConnection: Boolean = true
+        requireServiceConnection: Boolean = true,
     ): AgentResult {
         Log.i(TAG, "execute called with: $command, historySize=${conversationHistory.size}")
 
@@ -45,7 +46,8 @@ class AgentExecutor @Inject constructor(
 
             val config = AgentConfig(
                 provider = LLMProvider.OPENAI,
-                apiKey = apiKeyProvider.getApiKey()
+                apiKey = apiKeyProvider.getApiKey(),
+                agentType = agentType
             )
 
             Log.i(TAG, "Creating agent with ${conversationHistory.size} messages of conversation history")

@@ -5,10 +5,13 @@ import com.aiassistant.agent.AndroidAgentFactory
 import com.aiassistant.agent.DeviceTools
 import com.aiassistant.agent.NotificationTools
 import com.aiassistant.agent.QuickActionTools
+import com.aiassistant.agent.RecurringTaskTools
 import com.aiassistant.data.mapper.UINodeFormatter
 import com.aiassistant.domain.repository.ScreenRepository
+import com.aiassistant.domain.repository.recurringtask.RecurringTaskRepository
 import com.aiassistant.domain.usecase.notification.GetRecentNotificationsUseCase
 import com.aiassistant.framework.notification.NotificationActionStore
+import com.aiassistant.framework.scheduler.RecurringTaskCoordinator
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -49,11 +52,21 @@ object AgentModule {
 
     @Provides
     @Singleton
+    fun provideRecurringTaskTools(
+        repository: RecurringTaskRepository,
+        coordinator: RecurringTaskCoordinator
+    ): RecurringTaskTools {
+        return RecurringTaskTools(repository, coordinator)
+    }
+
+    @Provides
+    @Singleton
     fun provideAndroidAgentFactory(
         deviceTools: DeviceTools,
         quickActionTools: QuickActionTools,
-        notificationTools: NotificationTools
+        notificationTools: NotificationTools,
+        recurringTaskTools: RecurringTaskTools
     ): AndroidAgentFactory {
-        return AndroidAgentFactory(deviceTools, quickActionTools, notificationTools)
+        return AndroidAgentFactory(deviceTools, quickActionTools, notificationTools, recurringTaskTools)
     }
 }

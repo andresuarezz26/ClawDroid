@@ -92,6 +92,11 @@ dependencies {
   ksp(libs.dagger.hilt.android.compiler)
   implementation(libs.hilt.navigation.compose)
 
+  // WorkManager
+  implementation(libs.work.runtime.ktx)
+  implementation(libs.hilt.work)
+  ksp(libs.hilt.compiler)
+
   // Coroutines
   implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
 

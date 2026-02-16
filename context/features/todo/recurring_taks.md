@@ -9,9 +9,25 @@ WhatsApp and send me a summary"). This feature adds:
 2. Agent tools so the LLM can create/manage tasks via chat
 3. Side drawer navigation replacing the current TopAppBar settings icon
 4. Task list + detail screens for viewing and managing tasks
-5. AlarmManager + WorkManager scheduling for precise time-of-day execution
+5. Dual scheduling: AlarmManager (time-sensitive) + WorkManager only (flexible)
 
 Schedule format: hour + minute + days-of-week (not cron). Simple, LLM-friendly, maps to UI pickers.
+
+Dual Scheduling Strategy
+
+The agent classifies each task at creation time:
+
+Time-sensitive (isTimeSensitive = true) — AlarmManager + WorkManager chain:
+- Wake up alarms, medical reminders, meeting prep, scheduled messages
+- Anything where a 15-minute delay would matter
+- Route: AlarmManager.setExactAndAllowWhileIdle → Receiver → WorkManager OneTimeWork
+- Requires SCHEDULE_EXACT_ALARM permission (Android 12+)
+
+Flexible (isTimeSensitive = false) — WorkManager PeriodicWorkRequest only:
+- Summaries, research, monitoring, cleanup, lookups
+- Anything where approximate timing is fine (9:00 vs 9:12 doesn't matter)
+- Route: WorkManager PeriodicWorkRequest directly (simpler, more battery-friendly)
+- Default unless precision clearly matters
 
  ---
 Architecture Diagrams
@@ -57,21 +73,23 @@ High-Level Component Overview
 │       │                    FRAMEWORK LAYER                                  │
 │       │                                                                     │
 │       ▼                                                                     │
-│  RecurringTaskCoordinator ──► RecurringTaskScheduler ──► AlarmManager       │
-│       │                                                       │             │
-│       │  (orchestrates DB + scheduling)                       │ fires       │
-│       │                                                       ▼             │
-│       │                                        RecurringTaskReceiver        │
-│       │                                                       │             │
-│       │                                                       │ enqueues    │
-│       │                                                       ▼             │
+│  RecurringTaskCoordinator ──► RecurringTaskScheduler                        │
+│       │                            │                                        │
+│       │  (orchestrates             ├── isTimeSensitive=true:                │
+│       │   DB + scheduling)         │     AlarmManager (exact)               │
+│       │                            │       └── RecurringTaskReceiver        │
+│       │                            │             └── WorkManager OneTimeWork│
+│       │                            │                                        │
+│       │                            └── isTimeSensitive=false:               │
+│       │                                  WorkManager PeriodicWork (approx)  │
+│       │                                                                     │
 │       └──────────────────────────────────── RecurringTaskWorker             │
-│                                              (WorkManager CoroutineWorker)  │
+│                                              (shared by both paths)         │
 │                                                  │                          │
 │                                                  ├── AgentExecutor.execute()│
 │                                                  ├── Save to DB             │
 │                                                  ├── Notify Telegram        │
-│                                                  └── Reschedule next alarm  │
+│                                                  └── Reschedule (if exact)  │
 └─────────────────────────────────────────────────────────────────────────────┘
 
 Chat-Based Task Creation Flow
@@ -109,25 +127,39 @@ Agent returns: "Done! Created 'Morning WhatsApp Check' — runs daily at 9:00 AM
 
 Scheduled Task Execution Flow
 
-AlarmManager fires at 9:00 AM
+Path A — Time-sensitive tasks (isTimeSensitive=true):
+AlarmManager fires at exact time (e.g., 9:00 AM)
 │
 ▼
 RecurringTaskReceiver (BroadcastReceiver)
 │
 │  enqueues OneTimeWorkRequest with taskId
 ▼
-WorkManager ──► RecurringTaskWorker.doWork()
+WorkManager ──► RecurringTaskWorker.doWork()  ──► (see shared worker steps below)
+│
+└── After completion: reschedule next alarm
+└── Scheduler.scheduleTask(task) → AlarmManager
+
+Path B — Flexible tasks (isTimeSensitive=false):
+WorkManager PeriodicWorkRequest fires (~24h interval, approximate)
+│
+▼
+RecurringTaskWorker.doWork()  ──► (see shared worker steps below)
+│
+└── No rescheduling needed (WorkManager auto-repeats)
+
+Shared Worker Steps:
+RecurringTaskWorker.doWork()
 │
 ├── 1. Load task from DB (Repository.getById)
 ├── 2. Check task.enabled == true
-├── 3. AgentExecutor.execute(task.prompt)
+├── 3. Check daysOfWeek (skip if today isn't a valid day, flexible tasks only)
+├── 4. AgentExecutor.execute(task.prompt)
 │       └── LLM processes prompt, uses tools, returns summary
-├── 4. Record execution result in task_executions table
-├── 5. Update lastRunAt/lastRunStatus on recurring_tasks
-├── 6. Save summary to conversation history
-├── 7. Send summary to Telegram (if connected)
-└── 8. Reschedule alarm for next occurrence
-└── Scheduler.scheduleTask(task) → AlarmManager
+├── 5. Record execution result in task_executions table
+├── 6. Update lastRunAt/lastRunStatus on recurring_tasks
+├── 7. Save summary to conversation history
+└── 8. Send summary to Telegram (if connected)
 
 Navigation Structure
 
@@ -151,19 +183,20 @@ Data Model
 
 recurring_tasks                          task_executions
 ┌──────────────────────────────┐        ┌────────────────────────────┐
-│ id           LONG PK         │        │ id           LONG PK       │
-│ title        TEXT             │        │ taskId       LONG FK ──────┤
-│ prompt       TEXT             │        │ executedAt   LONG          │
-│ hour         INT  (0-23)     │  1:N   │ status       TEXT          │
-│ minute       INT  (0-59)     │◄───────│ summary      TEXT?         │
-│ daysOfWeek   TEXT  ("1,2,3") │        │ durationMs   LONG?        │
+│ id              LONG PK      │───┐    │ id           LONG PK       │
+│ title           TEXT         │   │    │ taskId       LONG FK       │
+│ prompt          TEXT         │   │    │ executedAt   LONG          │
+│ hour            INT  (0-23)  │   │1:N │ status       TEXT          │
+│ minute          INT  (0-59)  │   └───►│ summary      TEXT?         │
+│ daysOfWeek      TEXT ("1,2") │        │ durationMs   LONG?        │
 │ scheduleDisplay TEXT         │        └────────────────────────────┘
-│ relatedApps  TEXT             │           CASCADE DELETE on parent
-│ enabled      BOOL             │
-│ createdAt    LONG             │
-│ lastRunAt    LONG?            │
-│ lastRunStatus TEXT?           │
-│ lastRunSummary TEXT?          │
+│ relatedApps     TEXT         │         taskId FK → recurring_tasks.id
+│ isTimeSensitive BOOL         │         CASCADE DELETE on parent
+│ enabled         BOOL         │
+│ createdAt       LONG         │
+│ lastRunAt       LONG?        │
+│ lastRunStatus   TEXT?        │
+│ lastRunSummary  TEXT?        │
 └──────────────────────────────┘
 
  ---
@@ -183,6 +216,7 @@ val minute: Int,            // 0-59
 val daysOfWeek: String,     // comma-separated: "1,2,3,4,5" (Mon-Fri), empty = every day
 val scheduleDisplay: String, // human-readable: "Every day at 9:00 AM"
 val relatedApps: String,    // comma-separated package names
+val isTimeSensitive: Boolean = false, // agent decides: true = AlarmManager, false = WorkManager only
 val enabled: Boolean = true,
 val createdAt: Long,
 val lastRunAt: Long? = null,
@@ -235,6 +269,7 @@ val minute: Int,
 val daysOfWeek: List<Int>,  // 1=Mon..7=Sun, empty=every day
 val scheduleDisplay: String,
 val relatedApps: List<String>,
+val isTimeSensitive: Boolean = false, // true = AlarmManager exact, false = WorkManager periodic
 val enabled: Boolean = true,
 val createdAt: Long,
 val lastRunAt: Long? = null,
@@ -313,9 +348,10 @@ private val repository: RecurringTaskRepository
      suspend fun createRecurringTask(
          title: String, prompt: String,
          hour: Int, minute: Int,
-         daysOfWeek: String,      // "1,2,3,4,5" or "" for every day
+         daysOfWeek: String,      // "1,2,3,4,5,6,7" or "" for every day
          scheduleDisplay: String,
-         relatedApps: String = ""
+         relatedApps: String = "",
+         isTimeSensitive: Boolean = false // true for alarms/reminders/scheduled messages
      ): String
 
      @Tool
@@ -351,7 +387,7 @@ Modify: agent/SystemPrompts.kt
 
 Add after NOTIFICATION TOOLS section:
 RECURRING TASK TOOLS:
-- createRecurringTask(title, prompt, hour, minute, daysOfWeek, scheduleDisplay, relatedApps)
+- createRecurringTask(title, prompt, hour, minute, daysOfWeek, scheduleDisplay, relatedApps, isTimeSensitive)
 - listRecurringTasks()
 - updateRecurringTask(taskId, ...)
 - deleteRecurringTask(taskId)
@@ -360,6 +396,19 @@ When a user says "every morning at 9am...", "remind me daily...", or "schedule a
 use createRecurringTask(). Extract: a short title, a detailed prompt for what the agent
 should do autonomously, the time (24h format), days of week (1=Mon..7=Sun, empty=daily),
 and any related app packages.
+
+When creating a recurring task, determine if it's time-sensitive:
+- Time-sensitive (isTimeSensitive=true): alarms, reminders, appointment alerts,
+  scheduled messages, meeting prep — anything where a 15-minute delay would matter
+- Flexible (isTimeSensitive=false): research, summaries, lookups, monitoring,
+  cleanup — anything where approximate timing is fine
+  Default to flexible unless precision clearly matters.
+
+Examples:
+- "Every morning check WhatsApp" → flexible (summary, approximate timing fine)
+- "Remind me at 2pm to take medicine" → time-sensitive (medical, exact time matters)
+- "Check cheap flights to Tokyo every few hours" → flexible (monitoring)
+- "At exactly 6pm send this message" → time-sensitive (scheduled message)
 
  ---
 Phase 4: Navigation — Side Drawer
@@ -390,7 +439,11 @@ Modify: presentation/chat/ChatScreen.kt
 - Replace actions = { IconButton(Settings) } with navigationIcon = { IconButton(Menu) }
 
  ---
-Phase 5: Scheduling — AlarmManager + WorkManager
+Phase 5: Scheduling — Dual Strategy
+
+Two paths based on isTimeSensitive:
+- Time-sensitive: AlarmManager → BroadcastReceiver → WorkManager OneTimeWork → Worker
+- Flexible: WorkManager PeriodicWorkRequest → Worker (simpler, battery-friendly)
 
 5.1 Add WorkManager dependency
 
@@ -401,36 +454,56 @@ Modify: app/build.gradle.kts — add implementation(libs.work.runtime.ktx), impl
 
 New file: framework/scheduler/RecurringTaskWorker.kt
 
-@HiltWorker CoroutineWorker that:
+@HiltWorker CoroutineWorker — shared by both paths. Does the actual work:
 1. Reads taskId from inputData
 2. Loads task from repository, checks if enabled
-3. Executes prompt via AgentExecutor.execute(task.prompt, requireServiceConnection = false)
-4. Records execution result
-5. Saves summary to conversation history
-6. Sends to Telegram if connected
-7. Reschedules the next alarm via RecurringTaskScheduler
+3. For flexible tasks with daysOfWeek restrictions: checks if today is a valid day, skips if not
+4. Executes prompt via AgentExecutor.execute(task.prompt, requireServiceConnection = false)
+5. Records execution result in task_executions
+6. Updates lastRunAt/lastRunStatus on the task
+7. Saves summary to conversation history
+8. Sends to Telegram if connected
+9. If time-sensitive: reschedules next alarm via RecurringTaskScheduler
+   (flexible tasks auto-repeat via WorkManager's PeriodicWorkRequest)
 
 5.3 RecurringTaskScheduler
 
 New file: framework/scheduler/RecurringTaskScheduler.kt
 
-Uses AlarmManager.setExactAndAllowWhileIdle() to fire at precise times. Calculates next fire time based on hour/minute/daysOfWeek using Calendar.
+Handles both scheduling paths:
+
+scheduleTask(task: RecurringTask):
+if (task.isTimeSensitive):
+→ AlarmManager.setExactAndAllowWhileIdle(nextFireTime, pendingIntent)
+else:
+→ WorkManager.enqueueUniquePeriodicWork(
+name = "recurring_task_{id}",
+interval = 24h (or calculated from schedule),
+initialDelay = time until next occurrence,
+constraints = NetworkType.CONNECTED
+)
+
+cancelTask(taskId):
+→ AlarmManager.cancel(pendingIntent)  // for time-sensitive
+→ WorkManager.cancelUniqueWork(name)   // for flexible
+
+Key method: calculateNextFireTime(hour, minute, daysOfWeek) — Calendar-based, finds next valid occurrence.
 
 5.4 RecurringTaskReceiver
 
 New file: framework/scheduler/RecurringTaskReceiver.kt
 
-BroadcastReceiver that receives alarm, enqueues a OneTimeWorkRequest for RecurringTaskWorker.
+BroadcastReceiver — only used by time-sensitive tasks. Receives exact alarm, enqueues a OneTimeWorkRequest for RecurringTaskWorker.
 
 5.5 RecurringTaskCoordinator
 
 New file: framework/scheduler/RecurringTaskCoordinator.kt
 
-Orchestrates repository + scheduler:
-- createAndSchedule(task) — save to DB, schedule alarm
-- toggleAndReschedule(taskId, enabled) — update DB, schedule or cancel alarm
-- deleteAndCancel(taskId) — delete from DB, cancel alarm
-- rescheduleAllEnabled() — called on app start / boot
+Orchestrates repository + scheduler (same interface regardless of scheduling path):
+- createAndSchedule(task) — save to DB, schedule via appropriate path
+- toggleAndReschedule(taskId, enabled) — update DB, schedule or cancel
+- deleteAndCancel(taskId) — delete from DB, cancel schedule
+- rescheduleAllEnabled() — called on app start / boot, reschedules all enabled tasks
 
 5.6 Initialize WorkManager with HiltWorkerFactory
 
@@ -443,7 +516,7 @@ Modify: presentation/ClawdroidApp.kt
 
 Modify: AndroidManifest.xml
 - Add RECEIVE_BOOT_COMPLETED, SCHEDULE_EXACT_ALARM permissions
-- Register RecurringTaskReceiver
+- Register RecurringTaskReceiver (for time-sensitive alarms)
 - Add WorkManager initializer override <provider> block
 - Register boot receiver to call rescheduleAllEnabled()
 

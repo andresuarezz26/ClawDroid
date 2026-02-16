@@ -4,17 +4,20 @@ import android.content.Context
 import androidx.room.Room
 import com.aiassistant.data.local.AppDatabase
 import com.aiassistant.data.local.dao.notification.NotificationDao
+import com.aiassistant.data.local.dao.recurringtask.RecurringTaskDao
 import com.aiassistant.data.local.dao.telegram.ConversationDao
 import com.aiassistant.data.local.dao.telegram.MessageDao
 import com.aiassistant.data.repository.AppRepositoryImpl
 import com.aiassistant.data.repository.ScreenRepositoryImpl
 import com.aiassistant.data.repository.messages.MessagesRepositoryImpl
 import com.aiassistant.data.repository.notification.NotificationRepositoryImpl
+import com.aiassistant.data.repository.recurringtask.RecurringTaskRepositoryImpl
 import com.aiassistant.data.repository.telegram.TelegramRepositoryImpl
 import com.aiassistant.domain.repository.AppRepository
 import com.aiassistant.domain.repository.ScreenRepository
 import com.aiassistant.domain.repository.messages.MessagesRepository
 import com.aiassistant.domain.repository.notification.NotificationRepository
+import com.aiassistant.domain.repository.recurringtask.RecurringTaskRepository
 import com.aiassistant.domain.repository.telegram.TelegramRepository
 import dagger.Binds
 import dagger.Module
@@ -47,6 +50,10 @@ abstract class DataModule {
     @Binds
     @Singleton
     abstract fun bindNotificationRepository(impl: NotificationRepositoryImpl): NotificationRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindRecurringTaskRepository(impl: RecurringTaskRepositoryImpl): RecurringTaskRepository
 }
 
 @Module
@@ -81,5 +88,11 @@ object DatabaseModule {
     @Singleton
     fun provideNotificationDao(database: AppDatabase): NotificationDao {
         return database.notificationDao()
+    }
+
+    @Provides
+    @Singleton
+    fun provideRecurringTaskDao(database: AppDatabase): RecurringTaskDao {
+        return database.recurringTaskDao()
     }
 }

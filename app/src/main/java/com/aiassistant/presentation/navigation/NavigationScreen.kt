@@ -9,4 +9,10 @@ sealed class NavigationScreen {
 
   @Serializable
   object TelegramSettings: NavigationScreen()
+
+  @Serializable
+  object RecurringTaskList: NavigationScreen()
+
+  @Serializable
+  data class RecurringTaskDetail(val taskId: Long): NavigationScreen()
 }

@@ -5,6 +5,7 @@ import android.content.Intent
 import android.util.Log
 import com.aiassistant.agent.AgentExecutor
 import com.aiassistant.agent.AgentResult
+import com.aiassistant.agent.AgentType
 import com.aiassistant.domain.model.DEFAULT_CHAT_ID
 import com.aiassistant.domain.preference.SharedPreferenceDataSource
 import com.aiassistant.domain.repository.notification.NotificationRepository
@@ -115,7 +116,8 @@ class NotificationReactor @Inject constructor(
                     var result = agentExecutor.execute(
                         command = prompt,
                         conversationHistory = history,
-                        requireServiceConnection = true
+                        requireServiceConnection = true,
+                        agentType = AgentType.NOTIFICATION_REACTOR
                     )
 
                     // Fallback: if accessibility service is not connected, retry with quick actions only
@@ -124,7 +126,8 @@ class NotificationReactor @Inject constructor(
                         result = agentExecutor.execute(
                             command = prompt,
                             conversationHistory = history,
-                            requireServiceConnection = false
+                            requireServiceConnection = false,
+                            agentType = AgentType.NOTIFICATION_REACTOR
                         )
                     }
 

@@ -3,9 +3,12 @@ package com.aiassistant.data.local
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import com.aiassistant.data.local.dao.notification.NotificationDao
+import com.aiassistant.data.local.dao.recurringtask.RecurringTaskDao
 import com.aiassistant.data.local.dao.telegram.ConversationDao
 import com.aiassistant.data.local.dao.telegram.MessageDao
 import com.aiassistant.data.local.entity.notification.NotificationEntity
+import com.aiassistant.data.local.entity.recurringtask.RecurringTaskEntity
+import com.aiassistant.data.local.entity.recurringtask.TaskExecutionEntity
 import com.aiassistant.data.local.entity.ConversationEntity
 import com.aiassistant.data.local.entity.MessageEntity
 
@@ -13,13 +16,16 @@ import com.aiassistant.data.local.entity.MessageEntity
     entities = [
         ConversationEntity::class,
         MessageEntity::class,
-        NotificationEntity::class
+        NotificationEntity::class,
+        RecurringTaskEntity::class,
+        TaskExecutionEntity::class
     ],
-    version = 5,
+    version = 6,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun telegramConversationDao(): ConversationDao
     abstract fun telegramMessageDao(): MessageDao
     abstract fun notificationDao(): NotificationDao
+    abstract fun recurringTaskDao(): RecurringTaskDao
 }
