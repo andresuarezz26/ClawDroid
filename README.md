@@ -16,7 +16,7 @@ Text it. It does things. No server required.**
 ClawDroid is an open-source AI agent that runs on any Android device. 
 Text it on **Telegram** or use the built-in chat, and it actually does things:
 
-- 📱 **Control any app** — Post on Instagram, reply to WhatsApp, scroll through LinkedIn
+- 📱 **Control most apps** — Post on Instagram, reply to WhatsApp, scroll through LinkedIn
 - ⏰ **Run scheduled tasks** — "Apply to 10 jobs on LinkedIn every morning"
 - 🔔 **React to notifications** — Auto-reply to emails, respond to DMs, triage messages
 - 📅 **Access your data** — "What's on my calendar next week?"
@@ -25,12 +25,12 @@ Think ChatGPT/Claude, but with hands.
 
 <br/>
 
-🤖 **Live demo**: ClawDroid manages their own X account **[@clawdroidagent](https://x.com/clawdroidagent)** autonomously. It posts daily, replies to comments, and answers DMs. **[Go DM it →](https://x.com/clawdroidagent)**
+🤖 **Live demo**: ClawDroid manages its own X account **[@clawdroidagent](https://x.com/clawdroidagent)** autonomously. It posts daily, replies to comments, and answers DMs. **[Go DM it →](https://x.com/clawdroidagent)**
 <br/>
 
 ## How to use it? 
 
-You can build the APK from source or download from Github [releases](https://github.com/andresuarezz26/ClawDroid/releases). 
+**[📱 Download APK](https://github.com/andresuarezz26/ClawDroid/releases/latest/download/clawdroid-v1.0.0.apk)** · [View Releases](https://github.com/andresuarezz26/ClawDroid/releases)
 
 ---
 
@@ -56,35 +56,23 @@ Direct to LLM API. Fewer hops, faster responses.
 
 ---
 
-## How it looks?
+## Screenshots
 
+<div align="center">
 <img width="300" height="668" alt="screenshot1" src="https://github.com/user-attachments/assets/92b706bb-6b56-4425-ae6d-b4390c6ba8d2" />
 <img width="300" height="668" alt="screenshotnumber2clawdroid" src="https://github.com/user-attachments/assets/2f6fd3f0-3e21-4c71-a819-13b42a5fe6ec" />
 <img width="300" height="668" alt="screenshot3" src="https://github.com/user-attachments/assets/e3082ba2-b834-4010-af45-dc51517892a7" />
-
-## Real Use Cases
-
-**The "Second Phone" Setup**
-Buy a $50 used Android phone. Install ClawDroid. Connect it to your Telegram. Leave it plugged in on your desk. Now you have a personal agent that's always online, always connected, controlled from your main phone or laptop.
-
-**The Automation Hub**
-ClawDroid can interact with apps that have no API. Check prices on websites, monitor social media, automate repetitive tasks in any Android app.
-
-**Accessibility**
-For users who have difficulty interacting with touchscreens, ClawDroid provides a text-based interface to control the entire phone.
-
----
-
+</div>
 ## Installation
 
 ### Prerequisites
 - Android 7.0+ device (API 24)
-- Telegram account
 - API key from OpenAI, Anthropic, or Google
+- Telegram account (Optional)
 
 ### Quick Start
 
-1. **Build from source** or download the APK from [Releases](https://github.com/yourusername/clawdroid/releases)
+1. **Build from source** or download the APK from [Releases](https://github.com/andresuarezz26/ClawDroid/releases)
 
 2. **Install and grant permissions:**
     - Accessibility Service (for screen control)
@@ -103,12 +91,6 @@ For users who have difficulty interacting with touchscreens, ClawDroid provides 
 ---
 
 ## Architecture
-
-## Architecture
-
-ClawDroid uses a multi-tier response strategy. The LLM decides the best approach for each request:
-
-## Architecture
 ```
                          ┌──────────────────┐
                          │   INPUT SOURCES  │
@@ -117,8 +99,8 @@ ClawDroid uses a multi-tier response strategy. The LLM decides the best approach
           ┌───────────────────────┼───────────────────────┐
           ▼                       ▼                       ▼
    ┌─────────────┐        ┌─────────────┐        ┌───────────────┐
-   │  In-App     │        │  Telegram   │        │ Notifications │
-   │  Chat UI    │        │  Bot API    │        │   Listener    │
+   │  In-App     │        │  Telegram   │        │ Notification  │
+   │  Chat UI    │        │  Bot API    │        │   Alarms      │
    └──────┬──────┘        └──────┬──────┘        └───────┬───────┘
           │                      │                       │
           └──────────────────────┴───────────────────────┘
@@ -142,32 +124,97 @@ ClawDroid uses a multi-tier response strategy. The LLM decides the best approach
                                        any app
 ```
 
-1. **Direct answer** — If the LLM knows the answer, just respond
-2. **Web search** — Opens a browser search; the agent can read the screen afterward
-3. **Quick actions** — For system actions (SMS, calls, alarms, navigation, calendar), use native intents
-4. **UI automation** — Read the screen and interact with any app element
-
 ---
 
 ## LLM Providers
 
 ClawDroid supports 3 providers with multiple models each:
 
-| Provider | Models | Default |
-|----------|--------|---------|
-| **OpenAI** | gpt-4o, gpt-4o-mini, gpt-4-turbo, gpt-5, gpt-5-mini, gpt-5.2 | gpt-5-mini |
-| **Anthropic** | claude-3-5-sonnet, claude-3-opus, claude-3-haiku | claude-3-5-sonnet |
-| **Google** | gemini-2.0-flash, gemini-2.5-pro, gemini-3-pro-preview | gemini-3-pro-preview |
+| Provider | Status |
+|----------|--------|
+| **OpenAI** | ✅ Supported |
+| **Anthropic** | ✅ Supported |
+| **Google** | ✅ Supported |
+
+---
+## Tools 
+
+ClawDroid's capabilities come from **tools** — functions the AI agent can call to interact with your device. When you send a message, the LLM decides which tools to use based on your request. The agent can chain multiple tools together to complete complex tasks.
+
+**34 tools** across 4 categories:
 
 ---
 
+### 📱 Mobile Automation (19 tools)
+*UI automation via AccessibilityService. The agent reads the screen and interacts with elements just like a human would.*
+
+| Tool | Description |
+|------|-------------|
+| `getScreen` | Get current screen UI tree with element indices |
+| `click` | Tap on an element by index |
+| `longClick` | Long press on an element |
+| `setText` | Type text into an editable field |
+| `clearText` | Clear all text from an editable field |
+| `focus` | Focus on an element without clicking |
+| `scroll` | Scroll an element (up/down/left/right) |
+| `swipe` | Swipe from one point to another |
+| `drag` | Drag from one point to another |
+| `pressBack` | Press the back button |
+| `pressHome` | Press the home button |
+| `pressEnter` | Press Enter/Search key on keyboard |
+| `openRecentApps` | Open the recent apps switcher |
+| `openNotifications` | Pull down the notification shade |
+| `openQuickSettings` | Open quick settings panel |
+| `launchApp` | Launch any installed app by name |
+| `waitForUpdate` | Wait for screen to settle after an action |
+| `taskComplete` | Signal that the task is done |
+| `taskFailed` | Signal that the task has failed |
+
+---
+
+### ⚡ Quick Actions (9 tools)
+*Instant actions via Android Intents. No UI automation needed — these execute immediately.*
+
+| Tool | Description |
+|------|-------------|
+| `sendSms` | Send an SMS message |
+| `makeCall` | Start a phone call |
+| `openUrl` | Open a URL in the default browser |
+| `setAlarm` | Set an alarm (24-hour format) |
+| `playMusic` | Play music by search query |
+| `openSettings` | Open device settings (wifi, bluetooth, display, etc.) |
+| `webSearch` | Open a web search in the browser |
+| `createCalendarEvent` | Create a calendar event |
+| `startNavigation` | Open navigation to an address |
+
+---
+
+### 🔔 Notifications (2 tools)
+*Read and respond to any notification on the device.*
+
+| Tool | Description |
+|------|-------------|
+| `getRecentNotifications` | Get recent notifications, filterable by app |
+| `replyToNotification` | Reply directly via inline reply action |
+
+---
+
+### ⏰ Recurring Tasks (4 tools)
+*Schedule tasks that run automatically. Create them by chatting naturally.*
+
+| Tool | Description |
+|------|-------------|
+| `createRecurringTask` | Create a scheduled task (e.g., "Post daily at 9 AM") |
+| `listRecurringTasks` | List all tasks with status and last run info |
+| `updateRecurringTask` | Update schedule, prompt, or enable/disable |
+| `deleteRecurringTask` | Delete a task permanently |
 ## Tech Stack
 
 - **Language:** Kotlin
+- **Agent Framework:** [Koog](https://github.com/JetBrains/koog) v0.6.1 by JetBrains
 - **UI:** Jetpack Compose + Material 3
 - **Architecture:** Clean Architecture + MVI
 - **DI:** Hilt
-- **Agent Framework:** [Koog](https://github.com/JetBrains/koog) v0.6.1 by JetBrains
 - **LLM Support:** OpenAI, Anthropic, Google
 - **Screen Control:** Android AccessibilityService
 - **Messaging:** Telegram Bot API (long-polling foreground service)
