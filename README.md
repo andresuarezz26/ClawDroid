@@ -107,7 +107,7 @@ For users who have difficulty interacting with touchscreens, ClawDroid provides 
 ## Architecture
 
 ClawDroid uses a multi-tier response strategy. The LLM decides the best approach for each request:
-```
+
 ## Architecture
 ```
                          ┌──────────────────┐
@@ -137,9 +137,9 @@ ClawDroid uses a multi-tier response strategy. The LLM decides the best approach
    └─────────┘ └─────────┘ └─────────┘ └─────────┘ └─────────┘
                    │           │           │           │
                 Browser    Intents   Accessibility  WorkManager/AlarmManager
-                   │       (instant)   Service     (recurring)
-                Needs                 Works on
-                parsing               any app
+                          (instant)   Service     (recurring)
+                                       Works on
+                                       any app
 ```
 
 1. **Direct answer** — If the LLM knows the answer, just respond
