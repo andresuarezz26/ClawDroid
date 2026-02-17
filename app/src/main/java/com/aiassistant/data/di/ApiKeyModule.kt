@@ -1,15 +1,12 @@
 package com.aiassistant.data.di
 
-import android.content.Context
-import android.content.SharedPreferences
-import androidx.security.crypto.EncryptedSharedPreferences
-import androidx.security.crypto.MasterKey
 import com.aiassistant.BuildConfig
+import com.aiassistant.agent.LLMProvider
 import com.aiassistant.data.remote.ApiKeyProvider
+import com.aiassistant.domain.preference.SharedPreferenceDataSource
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
-import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 
@@ -19,44 +16,31 @@ object ApiKeyModule {
 
     @Provides
     @Singleton
-    fun provideApiKeyProvider(@ApplicationContext context: Context): ApiKeyProvider {
-        return BuildConfigApiKeyProvider(context)
+    fun provideApiKeyProvider(preferences: SharedPreferenceDataSource): ApiKeyProvider {
+        return BuildConfigApiKeyProvider(preferences)
     }
 }
 
-class BuildConfigApiKeyProvider(context: Context) : ApiKeyProvider {
-    private val prefs: SharedPreferences by lazy {
-        try {
-            val masterKey = MasterKey.Builder(context)
-                .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-                .build()
-            EncryptedSharedPreferences.create(
-                context,
-                "clawdroid_secure_prefs",
-                masterKey,
-                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-            )
-        } catch (e: Exception) {
-            context.getSharedPreferences("clawdroid_prefs", Context.MODE_PRIVATE)
-        }
-    }
+class BuildConfigApiKeyProvider(
+    private val preferences: SharedPreferenceDataSource
+) : ApiKeyProvider {
 
     override fun getApiKey(): String {
-        // First check SharedPreferences for user-set key
-        val savedKey = prefs.getString(API_KEY_PREF, null)
+        return getApiKey(LLMProvider.OPENAI) ?: BuildConfig.OPENAI_API_KEY
+    }
+
+    override fun getApiKey(provider: LLMProvider): String? {
+        val savedKey = preferences.getApiKey(provider)
         if (!savedKey.isNullOrBlank()) {
             return savedKey
         }
-        // Fall back to BuildConfig key from local.properties
-        return BuildConfig.OPENAI_API_KEY
-    }
-
-    fun setApiKey(apiKey: String) {
-        prefs.edit().putString(API_KEY_PREF, apiKey).apply()
-    }
-
-    companion object {
-        private const val API_KEY_PREF = "openai_api_key"
+        // Fall back to BuildConfig only for OpenAI
+        if (provider == LLMProvider.OPENAI) {
+            val buildConfigKey = BuildConfig.OPENAI_API_KEY
+            if (buildConfigKey.isNotBlank()) {
+                return buildConfigKey
+            }
+        }
+        return null
     }
 }

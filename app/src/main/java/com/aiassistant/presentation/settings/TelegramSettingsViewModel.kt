@@ -3,6 +3,7 @@ package com.aiassistant.presentation.settings
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.aiassistant.agent.LLMProvider
 import com.aiassistant.domain.preference.SharedPreferenceDataSource
 import com.aiassistant.domain.repository.telegram.ConversationModel
 import com.aiassistant.domain.repository.telegram.TelegramRepository
@@ -31,7 +32,13 @@ data class TelegramSettingsState(
   val validationResult: ValidationResult? = null,
   val conversations: List<ConversationModel> = emptyList(),
   val isNotificationListenerEnabled: Boolean = false,
-  val isNotificationForwardingEnabled: Boolean = false
+  val isNotificationForwardingEnabled: Boolean = false,
+  val openAiKey: String = "",
+  val anthropicKey: String = "",
+  val googleKey: String = "",
+  val isOpenAiKeySet: Boolean = false,
+  val isAnthropicKeySet: Boolean = false,
+  val isGoogleKeySet: Boolean = false
 )
 
 sealed interface ValidationResult {
@@ -49,6 +56,9 @@ sealed interface TelegramSettingsIntent {
   data object CheckNotificationListenerStatus : TelegramSettingsIntent
   data object OpenNotificationListenerSettings : TelegramSettingsIntent
   data object ToggleNotificationForwarding : TelegramSettingsIntent
+  data class UpdateApiKey(val provider: LLMProvider, val key: String) : TelegramSettingsIntent
+  data class SaveApiKey(val provider: LLMProvider) : TelegramSettingsIntent
+  data class ClearApiKey(val provider: LLMProvider) : TelegramSettingsIntent
 }
 
 @HiltViewModel
@@ -74,11 +84,20 @@ class TelegramSettingsViewModel @Inject constructor(
     viewModelScope.launch {
       val hasToken = preferences.hasToken()
       val forwardingEnabled = preferences.getNotificationForwardingEnabled()
+      val hasOpenAi = preferences.hasApiKey(LLMProvider.OPENAI)
+      val hasAnthropic = preferences.hasApiKey(LLMProvider.ANTHROPIC)
+      val hasGoogle = preferences.hasApiKey(LLMProvider.GOOGLE)
       _state.update {
         it.copy(
           isTokenSet = hasToken,
           token = if (hasToken) "********" else "",
-          isNotificationForwardingEnabled = forwardingEnabled
+          isNotificationForwardingEnabled = forwardingEnabled,
+          isOpenAiKeySet = hasOpenAi,
+          openAiKey = if (hasOpenAi) "********" else "",
+          isAnthropicKeySet = hasAnthropic,
+          anthropicKey = if (hasAnthropic) "********" else "",
+          isGoogleKeySet = hasGoogle,
+          googleKey = if (hasGoogle) "********" else ""
         )
       }
 
@@ -118,6 +137,9 @@ class TelegramSettingsViewModel @Inject constructor(
       is TelegramSettingsIntent.CheckNotificationListenerStatus -> checkNotificationListenerStatus()
       is TelegramSettingsIntent.OpenNotificationListenerSettings -> openNotificationListenerSettings()
       is TelegramSettingsIntent.ToggleNotificationForwarding -> toggleNotificationForwarding()
+      is TelegramSettingsIntent.UpdateApiKey -> updateApiKey(intent.provider, intent.key)
+      is TelegramSettingsIntent.SaveApiKey -> saveApiKey(intent.provider)
+      is TelegramSettingsIntent.ClearApiKey -> clearApiKey(intent.provider)
     }
   }
 
@@ -203,5 +225,48 @@ class TelegramSettingsViewModel @Inject constructor(
     val newValue = !_state.value.isNotificationForwardingEnabled
     preferences.setNotificationForwardingEnabled(newValue)
     _state.update { it.copy(isNotificationForwardingEnabled = newValue) }
+  }
+
+  private fun updateApiKey(provider: LLMProvider, key: String) {
+    _state.update {
+      when (provider) {
+        LLMProvider.OPENAI -> it.copy(openAiKey = key)
+        LLMProvider.ANTHROPIC -> it.copy(anthropicKey = key)
+        LLMProvider.GOOGLE -> it.copy(googleKey = key)
+      }
+    }
+  }
+
+  private fun saveApiKey(provider: LLMProvider) {
+    val key = when (provider) {
+      LLMProvider.OPENAI -> _state.value.openAiKey
+      LLMProvider.ANTHROPIC -> _state.value.anthropicKey
+      LLMProvider.GOOGLE -> _state.value.googleKey
+    }.trim()
+
+    if (key.isBlank() || key == "********") {
+      _state.update { it.copy(validationResult = ValidationResult.Error("Please enter a valid API key")) }
+      return
+    }
+
+    preferences.setApiKey(provider, key)
+    _state.update {
+      when (provider) {
+        LLMProvider.OPENAI -> it.copy(isOpenAiKeySet = true, openAiKey = "********")
+        LLMProvider.ANTHROPIC -> it.copy(isAnthropicKeySet = true, anthropicKey = "********")
+        LLMProvider.GOOGLE -> it.copy(isGoogleKeySet = true, googleKey = "********")
+      }
+    }
+  }
+
+  private fun clearApiKey(provider: LLMProvider) {
+    preferences.clearApiKey(provider)
+    _state.update {
+      when (provider) {
+        LLMProvider.OPENAI -> it.copy(isOpenAiKeySet = false, openAiKey = "")
+        LLMProvider.ANTHROPIC -> it.copy(isAnthropicKeySet = false, anthropicKey = "")
+        LLMProvider.GOOGLE -> it.copy(isGoogleKeySet = false, googleKey = "")
+      }
+    }
   }
 }

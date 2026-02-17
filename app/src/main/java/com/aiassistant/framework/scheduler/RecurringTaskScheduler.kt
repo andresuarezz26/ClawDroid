@@ -30,7 +30,7 @@ class RecurringTaskScheduler @Inject constructor(
     private val workManager = WorkManager.getInstance(context)
 
     fun scheduleTask(task: RecurringTask) {
-        if (task.isTimeSensitive) {
+       if (task.isTimeSensitive) {
             scheduleExact(task)
         } else {
             scheduleFlexible(task)

@@ -5,4 +5,6 @@ sealed interface ChatIntent {
     data object CancelExecution : ChatIntent
     data object ClearHistory : ChatIntent
     data class UpdateInput(val input: String) : ChatIntent
+    data object ToggleModelDropdown : ChatIntent
+    data class SelectModel(val modelId: String) : ChatIntent
 }

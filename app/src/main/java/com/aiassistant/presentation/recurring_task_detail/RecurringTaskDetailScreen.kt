@@ -129,6 +129,17 @@ fun RecurringTaskDetailScreen(
                 )
             }
 
+            // Frequency
+            item {
+                OutlinedTextField(
+                    value = state.scheduleDisplay,
+                    readOnly = true,
+                    onValueChange = { viewModel.processIntent(RecurringTaskDetailIntent.UpdatePrompt(it)) },
+                    label = { Text("Frequency: ") },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+
             // Schedule — time
             item {
                 ScheduleSection(

@@ -13,7 +13,7 @@ import ai.koog.prompt.executor.llms.all.simpleGoogleAIExecutor
 import android.util.Log
 import com.aiassistant.agent.agent_strategy.AgentStrategy
 import com.aiassistant.agent.agent_strategy.GeneralAgent
-import com.aiassistant.agent.agent_strategy.NotificationReactor
+import com.aiassistant.agent.agent_strategy.NotificationReactorAgent
 import com.aiassistant.agent.agent_strategy.TaskExecutorAgent
 import com.aiassistant.domain.model.ChatMessage
 import javax.inject.Inject
@@ -110,12 +110,14 @@ class AndroidAgentFactory @Inject constructor(
       "claude-3-5-sonnet" -> AnthropicModels.Sonnet_3_5
       "claude-3-opus" -> AnthropicModels.Opus_3
       "claude-3-haiku" -> AnthropicModels.Haiku_3
-      else -> AnthropicModels.Sonnet_3_5
+      "sonnet-4-5" -> AnthropicModels.Sonnet_4_5
+      else -> AnthropicModels.Sonnet_4_5
     }
 
     LLMProvider.GOOGLE -> when (config.model) {
       "gemini-2.0-flash" -> GoogleModels.Gemini2_0Flash
       "gemini-2.5-pro" -> GoogleModels.Gemini2_5Pro
+      "gemini-3-pro" -> GoogleModels.Gemini3_Pro_Preview
       else -> GoogleModels.Gemini3_Pro_Preview
     }
   }
@@ -131,7 +133,7 @@ class AndroidAgentFactory @Inject constructor(
 
       AgentType.TASK_EXECUTOR -> TaskExecutorAgent(mobileAutomationTools, quickActionTools)
       AgentType.NOTIFICATION_REACTOR ->
-        NotificationReactor(
+        NotificationReactorAgent(
           mobileAutomationTools,
           quickActionTools,
           notificationTools,

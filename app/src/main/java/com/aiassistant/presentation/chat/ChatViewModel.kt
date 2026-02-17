@@ -14,9 +14,11 @@ import com.aiassistant.agent.AgentProgress
 import com.aiassistant.agent.AgentType
 import com.aiassistant.agent.AndroidAgentFactory
 import com.aiassistant.agent.LLMProvider
+import com.aiassistant.agent.ModelRegistry
 import com.aiassistant.data.remote.ApiKeyProvider
 import com.aiassistant.domain.model.ChatMessage
 import com.aiassistant.domain.model.DEFAULT_CHAT_ID
+import com.aiassistant.domain.preference.SharedPreferenceDataSource
 import com.aiassistant.domain.repository.ScreenRepository
 import com.aiassistant.domain.usecase.messages.GetConversationHistoryUseCase
 import com.aiassistant.domain.usecase.messages.SaveMessageUseCase
@@ -45,7 +47,8 @@ class ChatViewModel @Inject constructor(
     private val apiKeyProvider: ApiKeyProvider,
     private val screenRepository: ScreenRepository,
     private val saveMessageUseCase: SaveMessageUseCase,
-    private val getConversationHistoryUseCase: GetConversationHistoryUseCase
+    private val getConversationHistoryUseCase: GetConversationHistoryUseCase,
+    private val preferences: SharedPreferenceDataSource
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(ChatState())
@@ -59,6 +62,7 @@ class ChatViewModel @Inject constructor(
     private var executionJob: Job? = null
 
     init {
+        loadPersistedModel()
         viewModelScope.launch {
             val history = getConversationHistoryUseCase(DEFAULT_CHAT_ID, limit = 50)
             _state.update { it.copy(messages = history) }
@@ -67,6 +71,51 @@ class ChatViewModel @Inject constructor(
             screenRepository.isServiceConnected().collect { connected ->
                 _state.update { it.copy(isServiceConnected = connected) }
             }
+        }
+    }
+
+    fun refreshConfiguredProviders() {
+        val configured = LLMProvider.entries.filter { apiKeyProvider.getApiKey(it) != null }.toSet()
+        val currentModelId = _state.value.selectedModelId
+        val currentModel = ModelRegistry.findModel(currentModelId)
+
+        // If current model's provider no longer has a key, auto-select first available model
+        val needsReselect = currentModel == null || currentModel.provider !in configured
+        val newModel = if (needsReselect) {
+            ModelRegistry.models.firstOrNull { it.provider in configured }
+        } else null
+
+        _state.update {
+            var updated = it.copy(configuredProviders = configured)
+            if (newModel != null) {
+                preferences.setSelectedModelId(newModel.id)
+                updated = updated.copy(
+                    selectedModelId = newModel.id,
+                    selectedModelDisplayName = newModel.displayName
+                )
+            }
+            updated
+        }
+    }
+
+    private fun loadPersistedModel() {
+        val configured = LLMProvider.entries.filter { apiKeyProvider.getApiKey(it) != null }.toSet()
+        val savedModelId = preferences.getSelectedModelId()
+        val savedModel = savedModelId?.let { ModelRegistry.findModel(it) }
+
+        // Only use saved model if its provider has a key configured
+        val model = if (savedModel != null && savedModel.provider in configured) {
+            savedModel
+        } else {
+            ModelRegistry.models.firstOrNull { it.provider in configured } ?: ModelRegistry.defaultModel
+        }
+
+        _state.update {
+            it.copy(
+                selectedModelId = model.id,
+                selectedModelDisplayName = model.displayName,
+                configuredProviders = configured
+            )
         }
     }
 
@@ -80,6 +129,22 @@ class ChatViewModel @Inject constructor(
             is ChatIntent.ClearHistory -> {
                 _state.update { it.copy(messages = emptyList()) }
             }
+            is ChatIntent.ToggleModelDropdown -> {
+                _state.update { it.copy(isModelDropdownExpanded = !it.isModelDropdownExpanded) }
+            }
+            is ChatIntent.SelectModel -> selectModel(intent.modelId)
+        }
+    }
+
+    private fun selectModel(modelId: String) {
+        val model = ModelRegistry.findModel(modelId) ?: return
+        preferences.setSelectedModelId(modelId)
+        _state.update {
+            it.copy(
+                selectedModelId = model.id,
+                selectedModelDisplayName = model.displayName,
+                isModelDropdownExpanded = false
+            )
         }
     }
 
@@ -98,6 +163,15 @@ class ChatViewModel @Inject constructor(
         }
         if (!_state.value.isServiceConnected) {
             Log.i(TAG, "Service not connected — quick actions still available, UI automation disabled")
+        }
+
+        val selectedModel = ModelRegistry.findModel(_state.value.selectedModelId) ?: ModelRegistry.defaultModel
+        val apiKey = apiKeyProvider.getApiKey(selectedModel.provider)
+        if (apiKey.isNullOrBlank()) {
+            viewModelScope.launch {
+                _sideEffect.send(ChatSideEffect.ShowError("No API key configured for ${selectedModel.provider.name}. Go to Settings to add one."))
+            }
+            return
         }
 
         Log.i(TAG, "Starting command execution")
@@ -123,10 +197,11 @@ class ChatViewModel @Inject constructor(
                 // Save user message to DB
                 saveMessageUseCase(DEFAULT_CHAT_ID, command, isFromUser = true)
 
-                Log.i(TAG, "Creating agent config")
+                Log.i(TAG, "Creating agent config with provider=${selectedModel.provider}, model=${selectedModel.id}")
                 val config = AgentConfig(
-                    provider = LLMProvider.OPENAI,
-                    apiKey = apiKeyProvider.getApiKey(),
+                    provider = selectedModel.provider,
+                    model = selectedModel.id,
+                    apiKey = apiKey,
                     agentType = AgentType.GENERAL
                 )
 

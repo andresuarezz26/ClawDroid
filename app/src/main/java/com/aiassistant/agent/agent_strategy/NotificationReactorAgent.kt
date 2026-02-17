@@ -6,7 +6,7 @@ import com.aiassistant.agent.MobileAutomationTools
 import com.aiassistant.agent.NotificationTools
 import com.aiassistant.agent.QuickActionTools
 
-class NotificationReactor(
+class NotificationReactorAgent(
   private val mobileAutomationTools: MobileAutomationTools,
   private val quickActionTools: QuickActionTools,
   private val notificationTools: NotificationTools,

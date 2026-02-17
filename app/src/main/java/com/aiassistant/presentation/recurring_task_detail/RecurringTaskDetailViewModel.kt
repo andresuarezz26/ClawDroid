@@ -29,7 +29,8 @@ data class RecurringTaskDetailState(
     val editHour: Int = 9,
     val editMinute: Int = 0,
     val editDaysOfWeek: List<Int> = emptyList(),
-    val isEdited: Boolean = false
+    val isEdited: Boolean = false,
+    val scheduleDisplay: String = ""
 )
 
 sealed interface RecurringTaskDetailIntent {
@@ -80,7 +81,8 @@ class RecurringTaskDetailViewModel @Inject constructor(
                         editHour = task.hour,
                         editMinute = task.minute,
                         editDaysOfWeek = task.daysOfWeek,
-                        isEdited = false
+                        isEdited = false,
+                        scheduleDisplay = task.scheduleDisplay
                     )
                 }
             } else {

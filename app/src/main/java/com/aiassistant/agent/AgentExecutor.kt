@@ -3,6 +3,7 @@ package com.aiassistant.agent
 import android.util.Log
 import com.aiassistant.data.remote.ApiKeyProvider
 import com.aiassistant.domain.model.ChatMessage
+import com.aiassistant.domain.preference.SharedPreferenceDataSource
 import com.aiassistant.domain.repository.ScreenRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
@@ -19,7 +20,8 @@ private const val TAG = "AgentExecutor"
 class AgentExecutor @Inject constructor(
     private val agentFactory: AndroidAgentFactory,
     private val apiKeyProvider: ApiKeyProvider,
-    private val screenRepository: ScreenRepository
+    private val screenRepository: ScreenRepository,
+    private val preferences: SharedPreferenceDataSource
 ) {
     private val _progress = MutableSharedFlow<AgentProgress>(replay = 1)
     val progress: SharedFlow<AgentProgress> = _progress.asSharedFlow()
@@ -41,16 +43,26 @@ class AgentExecutor @Inject constructor(
             return AgentResult.ServiceNotConnected
         }
 
+        val selectedModel = preferences.getSelectedModelId()
+            ?.let { ModelRegistry.findModel(it) }
+            ?: ModelRegistry.defaultModel
+
+        val apiKey = apiKeyProvider.getApiKey(selectedModel.provider)
+        if (apiKey.isNullOrBlank()) {
+            return AgentResult.Failure("No API key configured for ${selectedModel.provider.name}. Go to Settings to add one.")
+        }
+
         return try {
             _progress.emit(AgentProgress.Started)
 
             val config = AgentConfig(
-                provider = LLMProvider.OPENAI,
-                apiKey = apiKeyProvider.getApiKey(),
+                provider = selectedModel.provider,
+                model = selectedModel.id,
+                apiKey = apiKey,
                 agentType = agentType
             )
 
-            Log.i(TAG, "Creating agent with ${conversationHistory.size} messages of conversation history")
+            Log.i(TAG, "Creating agent with provider=${selectedModel.provider}, model=${selectedModel.id}, ${conversationHistory.size} messages of conversation history")
             val agent = agentFactory.createAgent(config, conversationHistory)
 
             Log.i(TAG, "Running agent with command: $command")

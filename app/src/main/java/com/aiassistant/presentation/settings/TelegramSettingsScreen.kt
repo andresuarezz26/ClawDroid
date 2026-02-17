@@ -53,6 +53,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.aiassistant.agent.LLMProvider
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -104,6 +105,63 @@ fun TelegramSettingsScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            // API Keys Section
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Text(
+                            text = "API Keys",
+                            style = MaterialTheme.typography.titleMedium
+                        )
+
+                        Text(
+                            text = "Configure API keys for each LLM provider. Keys are stored encrypted on device.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+
+                        ApiKeyField(
+                            label = "OpenAI",
+                            value = state.openAiKey,
+                            isKeySet = state.isOpenAiKeySet,
+                            onValueChange = { viewModel.processIntent(TelegramSettingsIntent.UpdateApiKey(LLMProvider.OPENAI, it)) },
+                            onSave = { viewModel.processIntent(TelegramSettingsIntent.SaveApiKey(LLMProvider.OPENAI)) },
+                            onClear = { viewModel.processIntent(TelegramSettingsIntent.ClearApiKey(LLMProvider.OPENAI)) }
+                        )
+
+                        HorizontalDivider()
+
+                        ApiKeyField(
+                            label = "Anthropic",
+                            value = state.anthropicKey,
+                            isKeySet = state.isAnthropicKeySet,
+                            onValueChange = { viewModel.processIntent(TelegramSettingsIntent.UpdateApiKey(LLMProvider.ANTHROPIC, it)) },
+                            onSave = { viewModel.processIntent(TelegramSettingsIntent.SaveApiKey(LLMProvider.ANTHROPIC)) },
+                            onClear = { viewModel.processIntent(TelegramSettingsIntent.ClearApiKey(LLMProvider.ANTHROPIC)) }
+                        )
+
+                        HorizontalDivider()
+
+                        ApiKeyField(
+                            label = "Google AI",
+                            value = state.googleKey,
+                            isKeySet = state.isGoogleKeySet,
+                            onValueChange = { viewModel.processIntent(TelegramSettingsIntent.UpdateApiKey(LLMProvider.GOOGLE, it)) },
+                            onSave = { viewModel.processIntent(TelegramSettingsIntent.SaveApiKey(LLMProvider.GOOGLE)) },
+                            onClear = { viewModel.processIntent(TelegramSettingsIntent.ClearApiKey(LLMProvider.GOOGLE)) }
+                        )
+                    }
+                }
+            }
+
             // Token Section
             item {
                 Card(
@@ -416,6 +474,58 @@ private fun ConversationItem(conversation: com.aiassistant.domain.repository.tel
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+        }
+    }
+}
+
+@Composable
+private fun ApiKeyField(
+    label: String,
+    value: String,
+    isKeySet: Boolean,
+    onValueChange: (String) -> Unit,
+    onSave: () -> Unit,
+    onClear: () -> Unit
+) {
+    var showKey by remember { mutableStateOf(false) }
+
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelLarge
+        )
+
+        OutlinedTextField(
+            value = value,
+            onValueChange = onValueChange,
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text("$label API Key") },
+            placeholder = { Text("sk-...") },
+            singleLine = true,
+            visualTransformation = if (showKey) VisualTransformation.None else PasswordVisualTransformation(),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+            trailingIcon = {
+                Row {
+                    IconButton(onClick = { showKey = !showKey }) {
+                        Icon(
+                            if (showKey) Icons.Default.Close else Icons.Default.Edit,
+                            contentDescription = if (showKey) "Hide" else "Show"
+                        )
+                    }
+                    if (isKeySet) {
+                        IconButton(onClick = onClear) {
+                            Icon(Icons.Default.Delete, contentDescription = "Clear key")
+                        }
+                    }
+                }
+            }
+        )
+
+        Button(
+            onClick = onSave,
+            enabled = value.isNotBlank() && value != "********"
+        ) {
+            Text("Save")
         }
     }
 }
