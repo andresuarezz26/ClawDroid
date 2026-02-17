@@ -58,9 +58,9 @@ Direct to LLM API. Fewer hops, faster responses.
 
 ## How it looks?
 
-<img width="300" height="668" alt="screenshot1-clawdroid" src="https://github.com/user-attachments/assets/8e8d195e-6865-4873-8a17-84aab9ea60f3" />
+<img width="300" height="668" alt="screenshot1" src="https://github.com/user-attachments/assets/92b706bb-6b56-4425-ae6d-b4390c6ba8d2" />
 <img width="300" height="668" alt="screenshotnumber2clawdroid" src="https://github.com/user-attachments/assets/2f6fd3f0-3e21-4c71-a819-13b42a5fe6ec" />
-<img width="300" height="668" alt="screenshot3_model_selection" src="https://github.com/user-attachments/assets/8f3d0bd0-b176-443b-a1a0-f9e3a1309e3d" />
+<img width="300" height="668" alt="screenshot3" src="https://github.com/user-attachments/assets/e3082ba2-b834-4010-af45-dc51517892a7" />
 
 ## Real Use Cases
 
