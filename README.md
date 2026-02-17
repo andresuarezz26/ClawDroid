@@ -40,7 +40,7 @@ You can build the APK from source or download from Github [releases](https://git
 Some apps only exist on mobile or don't have APIs. Instagram, WhatsApp, TikTok, banking apps, delivery apps — they block desktop automation or don't have web versions. 
 
 🤖 **Automate anything without code**  
-No scripting. No Selenium. No Appium. No Zapier. No Make. No n8n. Just tell the agent what you want in plain English, and it figures out how to do it. Automate any app without writing a single line of code.
+No scripting. No Selenium. No Appium. No Zapier. No Make. No n8n. Just tell the agent what you want in plain English, and it figures out how to do it. Automate any task without writing a single line of code.
 
 🚀 **Fast setup**  
 Install the APK, add your API key, connect Telegram. Done in 5 minutes.
