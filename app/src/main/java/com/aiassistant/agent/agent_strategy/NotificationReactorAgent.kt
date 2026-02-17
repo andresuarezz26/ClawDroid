@@ -12,7 +12,7 @@ class NotificationReactorAgent(
   private val notificationTools: NotificationTools,
 ) : AgentStrategy {
   override fun systemPrompt(): String {
-    return SystemPrompts.GENERAL_AGENT
+    return SystemPrompts.NOTIFICATION_REACTOR
   }
 
   override fun toolRegistry() = ToolRegistry {
