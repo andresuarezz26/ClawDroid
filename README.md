@@ -13,8 +13,7 @@
 Text it. It does things. No server required.**
 </div>
 
-ClawDroid is an open-source AI agent that runs on any Android device. 
-Access it through Telegram or from the built-in chat. It doesn't require an external backend. It runs directly the LLMs and store the conversations in a local database. The agent can schedule recurrent tasks, react to notifications and manage all the apps installed on the phone.
+ClawDroid is an open-source personal AI assistant you run on an Android device (physical or virtual). Access it through Telegram or the built-in chat. It doesn't require an external backend, it runs LLMs directly and stores conversations in a local database. The agent can schedule recurring tasks, react to notifications, and manage all the apps installed on your phone.
 
 <br/>
 
